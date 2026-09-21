@@ -999,6 +999,25 @@ oidc_connect:
   userinfo_username_path: ""
 
 # =============================================================================
+# Logto ecosystem read-only adapter
+# Logto 生态只读适配层（默认关闭）
+# =============================================================================
+ecosystem:
+  enabled: false
+  issuer_url: "https://your-logto.example.com/oidc"
+  audience: "https://sub2api.example.com/ecosystem"
+  jwks_url: "https://your-logto.example.com/oidc/jwks"
+  allowed_client_ids: ["trusted-bff"]
+  public_gateway_url: "https://gateway.example.com"
+  allowed_signing_algs: ["RS256"]
+  clock_skew_seconds: 30
+  jwks_request_timeout_seconds: 5
+  jwks_max_response_bytes: 1048576
+  jwks_cache_ttl_seconds: 300
+  jwks_refresh_min_interval_seconds: 30
+  rate_limit_per_minute: 60
+
+# =============================================================================
 # Default Settings
 # 默认设置
 # =============================================================================

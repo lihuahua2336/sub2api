@@ -831,6 +831,10 @@ func ProvideAPIKeyService(
 // ProviderSet is the Wire provider set for all services
 var ProviderSet = wire.NewSet(
 	// Core services
+	ProvideEcosystemTokenVerifier,
+	ProvideEcosystemGroupProvider,
+	ProvideEcosystemModelProvider,
+	NewEcosystemService,
 	ProvideAuthService,
 	NewPasskeyService,
 	NewUserService,

@@ -1024,6 +1024,83 @@ func TestValidateOIDCAllowsExplicitCompatibilityOverridesForPKCEAndIDTokenValida
 	}
 }
 
+func TestValidateEcosystemDisabledDoesNotRequireLogtoConfiguration(t *testing.T) {
+	resetViperWithJWTSecret(t)
+	cfg, err := Load()
+	require.NoError(t, err)
+	cfg.Ecosystem = EcosystemConfig{}
+	require.NoError(t, cfg.Validate())
+}
+
+func TestValidateEcosystemRequiresCompleteTrustedLogtoConfiguration(t *testing.T) {
+	valid := EcosystemConfig{
+		Enabled:                       true,
+		IssuerURL:                     "https://auth.example.com/oidc",
+		Audience:                      "https://api.example.com",
+		JWKSURL:                       "https://auth-internal.example.com/oidc/jwks",
+		AllowedClientIDs:              []string{"trusted-bff"},
+		PublicGatewayURL:              "https://gateway.example.com",
+		AllowedSigningAlgs:            []string{"RS256"},
+		ClockSkewSeconds:              30,
+		JWKSRequestTimeoutSeconds:     5,
+		JWKSMaxResponseBytes:          1 << 20,
+		JWKSCacheTTLSeconds:           300,
+		JWKSRefreshMinIntervalSeconds: 30,
+		RateLimitPerMinute:            60,
+	}
+
+	tests := []struct {
+		name    string
+		mutate  func(*EcosystemConfig)
+		wantErr string
+	}{
+		{name: "issuer", mutate: func(c *EcosystemConfig) { c.IssuerURL = "" }, wantErr: "ecosystem.issuer_url"},
+		{name: "audience", mutate: func(c *EcosystemConfig) { c.Audience = "" }, wantErr: "ecosystem.audience"},
+		{name: "jwks", mutate: func(c *EcosystemConfig) { c.JWKSURL = "relative" }, wantErr: "ecosystem.jwks_url"},
+		{name: "clients", mutate: func(c *EcosystemConfig) { c.AllowedClientIDs = nil }, wantErr: "ecosystem.allowed_client_ids"},
+		{name: "gateway", mutate: func(c *EcosystemConfig) { c.PublicGatewayURL = "//host" }, wantErr: "ecosystem.public_gateway_url"},
+		{name: "algorithms", mutate: func(c *EcosystemConfig) { c.AllowedSigningAlgs = []string{"HS256"} }, wantErr: "ecosystem.allowed_signing_algs"},
+		{name: "clock skew", mutate: func(c *EcosystemConfig) { c.ClockSkewSeconds = 601 }, wantErr: "ecosystem.clock_skew_seconds"},
+		{name: "timeout", mutate: func(c *EcosystemConfig) { c.JWKSRequestTimeoutSeconds = 0 }, wantErr: "ecosystem.jwks_request_timeout_seconds"},
+		{name: "body limit", mutate: func(c *EcosystemConfig) { c.JWKSMaxResponseBytes = 0 }, wantErr: "ecosystem.jwks_max_response_bytes"},
+		{name: "refresh interval", mutate: func(c *EcosystemConfig) { c.JWKSRefreshMinIntervalSeconds = 0 }, wantErr: "ecosystem.jwks_refresh_min_interval_seconds"},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			resetViperWithJWTSecret(t)
+			cfg, err := Load()
+			require.NoError(t, err)
+			cfg.Ecosystem = valid
+			tt.mutate(&cfg.Ecosystem)
+			err = cfg.Validate()
+			require.ErrorContains(t, err, tt.wantErr)
+		})
+	}
+
+	resetViperWithJWTSecret(t)
+	cfg, err := Load()
+	require.NoError(t, err)
+	cfg.Ecosystem = valid
+	require.NoError(t, cfg.Validate())
+}
+
+func TestLoadEcosystemStringListsFromEnvironment(t *testing.T) {
+	resetViperWithJWTSecret(t)
+	t.Setenv("ECOSYSTEM_ENABLED", "true")
+	t.Setenv("ECOSYSTEM_ISSUER_URL", "https://auth.example.com/oidc")
+	t.Setenv("ECOSYSTEM_AUDIENCE", "https://api.example.com")
+	t.Setenv("ECOSYSTEM_JWKS_URL", "https://auth-internal.example.com/oidc/jwks")
+	t.Setenv("ECOSYSTEM_ALLOWED_CLIENT_IDS", " first-bff,second-bff ")
+	t.Setenv("ECOSYSTEM_PUBLIC_GATEWAY_URL", "https://gateway.example.com")
+	t.Setenv("ECOSYSTEM_ALLOWED_SIGNING_ALGS", "RS256, ES256")
+
+	cfg, err := Load()
+	require.NoError(t, err)
+	require.Equal(t, []string{"first-bff", "second-bff"}, cfg.Ecosystem.AllowedClientIDs)
+	require.Equal(t, []string{"RS256", "ES256"}, cfg.Ecosystem.AllowedSigningAlgs)
+}
+
 func TestLoadDefaultDashboardCacheConfig(t *testing.T) {
 	resetViperWithJWTSecret(t)
 

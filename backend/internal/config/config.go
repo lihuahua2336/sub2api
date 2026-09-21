@@ -81,6 +81,7 @@ type Config struct {
 	LinuxDo                 LinuxDoConnectConfig          `mapstructure:"linuxdo_connect"`
 	WeChat                  WeChatConnectConfig           `mapstructure:"wechat_connect"`
 	OIDC                    OIDCConnectConfig             `mapstructure:"oidc_connect"`
+	Ecosystem               EcosystemConfig               `mapstructure:"ecosystem"`
 	DingTalk                DingTalkConnectConfig         `mapstructure:"dingtalk_connect"`
 	GitHubOAuth             EmailOAuthProviderConfig      `mapstructure:"github_oauth"`
 	GoogleOAuth             EmailOAuthProviderConfig      `mapstructure:"google_oauth"`
@@ -357,6 +358,25 @@ type OIDCConnectConfig struct {
 	UserInfoEmailPath    string `mapstructure:"userinfo_email_path"`
 	UserInfoIDPath       string `mapstructure:"userinfo_id_path"`
 	UserInfoUsernamePath string `mapstructure:"userinfo_username_path"`
+}
+
+// EcosystemConfig configures the read-only Logto resource adapter. It is
+// intentionally separate from OIDCConnectConfig: the latter validates login ID
+// tokens, while this adapter validates access tokens for an API resource.
+type EcosystemConfig struct {
+	Enabled                       bool     `mapstructure:"enabled"`
+	IssuerURL                     string   `mapstructure:"issuer_url"`
+	Audience                      string   `mapstructure:"audience"`
+	JWKSURL                       string   `mapstructure:"jwks_url"`
+	AllowedClientIDs              []string `mapstructure:"allowed_client_ids"`
+	PublicGatewayURL              string   `mapstructure:"public_gateway_url"`
+	AllowedSigningAlgs            []string `mapstructure:"allowed_signing_algs"`
+	ClockSkewSeconds              int      `mapstructure:"clock_skew_seconds"`
+	JWKSRequestTimeoutSeconds     int      `mapstructure:"jwks_request_timeout_seconds"`
+	JWKSMaxResponseBytes          int64    `mapstructure:"jwks_max_response_bytes"`
+	JWKSCacheTTLSeconds           int      `mapstructure:"jwks_cache_ttl_seconds"`
+	JWKSRefreshMinIntervalSeconds int      `mapstructure:"jwks_refresh_min_interval_seconds"`
+	RateLimitPerMinute            int      `mapstructure:"rate_limit_per_minute"`
 }
 
 type DingTalkConnectConfig struct {
@@ -1825,6 +1845,15 @@ func load(allowMissingJWTSecret bool) (*Config, error) {
 	if forwardedClientIPHeadersEnvConfigured {
 		cfg.Security.ForwardedClientIPHeaders = normalizeStringSlice(strings.Split(forwardedClientIPHeadersEnv, ","))
 	}
+	// Viper's weakly typed decode does not reliably split comma-separated
+	// environment variables into []string. Keep list-valued deployment knobs
+	// explicit so env and YAML have the same semantics.
+	if allowedClients, ok := os.LookupEnv("ECOSYSTEM_ALLOWED_CLIENT_IDS"); ok {
+		cfg.Ecosystem.AllowedClientIDs = normalizeStringSlice(strings.Split(allowedClients, ","))
+	}
+	if signingAlgs, ok := os.LookupEnv("ECOSYSTEM_ALLOWED_SIGNING_ALGS"); ok {
+		cfg.Ecosystem.AllowedSigningAlgs = normalizeStringSlice(strings.Split(signingAlgs, ","))
+	}
 	cfg.Server.TrustedProxiesConfigured = trustedProxiesConfigured
 	if cfg.Gateway.OpenAIScheduler.StickyEscapeTTFTMs == 0 {
 		cfg.Gateway.OpenAIScheduler.StickyEscapeTTFTMs = 15000
@@ -1879,6 +1908,12 @@ func load(allowMissingJWTSecret bool) (*Config, error) {
 	cfg.OIDC.UserInfoUsernamePath = strings.TrimSpace(cfg.OIDC.UserInfoUsernamePath)
 	cfg.OIDC.UsePKCEExplicit = hasExplicitConfigOrEnv("oidc_connect.use_pkce", "OIDC_CONNECT_USE_PKCE")
 	cfg.OIDC.ValidateIDTokenExplicit = hasExplicitConfigOrEnv("oidc_connect.validate_id_token", "OIDC_CONNECT_VALIDATE_ID_TOKEN")
+	cfg.Ecosystem.IssuerURL = strings.TrimSpace(cfg.Ecosystem.IssuerURL)
+	cfg.Ecosystem.Audience = strings.TrimSpace(cfg.Ecosystem.Audience)
+	cfg.Ecosystem.JWKSURL = strings.TrimSpace(cfg.Ecosystem.JWKSURL)
+	cfg.Ecosystem.AllowedClientIDs = normalizeStringSlice(cfg.Ecosystem.AllowedClientIDs)
+	cfg.Ecosystem.PublicGatewayURL = strings.TrimRight(strings.TrimSpace(cfg.Ecosystem.PublicGatewayURL), "/")
+	cfg.Ecosystem.AllowedSigningAlgs = normalizeStringSlice(cfg.Ecosystem.AllowedSigningAlgs)
 	cfg.Dashboard.KeyPrefix = strings.TrimSpace(cfg.Dashboard.KeyPrefix)
 	cfg.CORS.AllowedOrigins = normalizeStringSlice(cfg.CORS.AllowedOrigins)
 	cfg.Security.ResponseHeaders.AdditionalAllowed = normalizeStringSlice(cfg.Security.ResponseHeaders.AdditionalAllowed)
@@ -2143,6 +2178,21 @@ func setDefaults() {
 	viper.SetDefault("oidc_connect.userinfo_email_path", "")
 	viper.SetDefault("oidc_connect.userinfo_id_path", "")
 	viper.SetDefault("oidc_connect.userinfo_username_path", "")
+
+	// Logto ecosystem read-only resource adapter.
+	viper.SetDefault("ecosystem.enabled", false)
+	viper.SetDefault("ecosystem.issuer_url", "")
+	viper.SetDefault("ecosystem.audience", "")
+	viper.SetDefault("ecosystem.jwks_url", "")
+	viper.SetDefault("ecosystem.allowed_client_ids", []string{})
+	viper.SetDefault("ecosystem.public_gateway_url", "")
+	viper.SetDefault("ecosystem.allowed_signing_algs", []string{"RS256", "ES256", "PS256"})
+	viper.SetDefault("ecosystem.clock_skew_seconds", 60)
+	viper.SetDefault("ecosystem.jwks_request_timeout_seconds", 5)
+	viper.SetDefault("ecosystem.jwks_max_response_bytes", 1048576)
+	viper.SetDefault("ecosystem.jwks_cache_ttl_seconds", 300)
+	viper.SetDefault("ecosystem.jwks_refresh_min_interval_seconds", 30)
+	viper.SetDefault("ecosystem.rate_limit_per_minute", 60)
 
 	// DingTalk Connect OAuth 登录
 	viper.SetDefault("dingtalk_connect.enabled", false)
@@ -3036,6 +3086,67 @@ func (c *Config) Validate() error {
 		warnIfInsecureURL("oidc_connect.jwks_url", c.OIDC.JWKSURL)
 		warnIfInsecureURL("oidc_connect.redirect_url", c.OIDC.RedirectURL)
 		warnIfInsecureURL("oidc_connect.frontend_redirect_url", c.OIDC.FrontendRedirectURL)
+	}
+	if c.Ecosystem.Enabled {
+		if strings.TrimSpace(c.Ecosystem.IssuerURL) == "" {
+			return fmt.Errorf("ecosystem.issuer_url is required when ecosystem.enabled=true")
+		}
+		if strings.TrimSpace(c.Ecosystem.Audience) == "" {
+			return fmt.Errorf("ecosystem.audience is required when ecosystem.enabled=true")
+		}
+		if strings.TrimSpace(c.Ecosystem.JWKSURL) == "" {
+			return fmt.Errorf("ecosystem.jwks_url is required when ecosystem.enabled=true")
+		}
+		if len(c.Ecosystem.AllowedClientIDs) == 0 {
+			return fmt.Errorf("ecosystem.allowed_client_ids must contain at least one client when ecosystem.enabled=true")
+		}
+		if strings.TrimSpace(c.Ecosystem.PublicGatewayURL) == "" {
+			return fmt.Errorf("ecosystem.public_gateway_url is required when ecosystem.enabled=true")
+		}
+		for name, rawURL := range map[string]string{
+			"ecosystem.issuer_url":         c.Ecosystem.IssuerURL,
+			"ecosystem.jwks_url":           c.Ecosystem.JWKSURL,
+			"ecosystem.public_gateway_url": c.Ecosystem.PublicGatewayURL,
+		} {
+			if err := ValidateAbsoluteHTTPURL(rawURL); err != nil {
+				return fmt.Errorf("%s invalid: %w", name, err)
+			}
+			parsed, err := url.Parse(rawURL)
+			if err != nil || parsed.User != nil || parsed.RawQuery != "" || parsed.Fragment != "" {
+				return fmt.Errorf("%s invalid: userinfo, query, and fragment are not allowed", name)
+			}
+		}
+		allowedAlgs := map[string]struct{}{
+			"RS256": {}, "RS384": {}, "RS512": {},
+			"PS256": {}, "PS384": {}, "PS512": {},
+			"ES256": {}, "ES384": {}, "ES512": {},
+		}
+		if len(c.Ecosystem.AllowedSigningAlgs) == 0 {
+			return fmt.Errorf("ecosystem.allowed_signing_algs must not be empty")
+		}
+		for _, alg := range c.Ecosystem.AllowedSigningAlgs {
+			if _, ok := allowedAlgs[alg]; !ok {
+				return fmt.Errorf("ecosystem.allowed_signing_algs contains unsupported algorithm %q", alg)
+			}
+		}
+		if c.Ecosystem.ClockSkewSeconds < 0 || c.Ecosystem.ClockSkewSeconds > 600 {
+			return fmt.Errorf("ecosystem.clock_skew_seconds must be between 0 and 600")
+		}
+		if c.Ecosystem.JWKSRequestTimeoutSeconds < 1 || c.Ecosystem.JWKSRequestTimeoutSeconds > 30 {
+			return fmt.Errorf("ecosystem.jwks_request_timeout_seconds must be between 1 and 30")
+		}
+		if c.Ecosystem.JWKSMaxResponseBytes < 1024 || c.Ecosystem.JWKSMaxResponseBytes > 16*1024*1024 {
+			return fmt.Errorf("ecosystem.jwks_max_response_bytes must be between 1024 and 16777216")
+		}
+		if c.Ecosystem.JWKSCacheTTLSeconds < 1 || c.Ecosystem.JWKSCacheTTLSeconds > 86400 {
+			return fmt.Errorf("ecosystem.jwks_cache_ttl_seconds must be between 1 and 86400")
+		}
+		if c.Ecosystem.JWKSRefreshMinIntervalSeconds < 1 || c.Ecosystem.JWKSRefreshMinIntervalSeconds > 3600 {
+			return fmt.Errorf("ecosystem.jwks_refresh_min_interval_seconds must be between 1 and 3600")
+		}
+		if c.Ecosystem.RateLimitPerMinute < 1 || c.Ecosystem.RateLimitPerMinute > 10000 {
+			return fmt.Errorf("ecosystem.rate_limit_per_minute must be between 1 and 10000")
+		}
 	}
 	if c.Billing.CircuitBreaker.Enabled {
 		if c.Billing.CircuitBreaker.FailureThreshold <= 0 {

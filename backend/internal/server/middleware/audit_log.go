@@ -58,6 +58,7 @@ var auditExtraAllowedKeys = map[string]struct{}{
 	"http_status": {}, "latency_ms": {}, "token_applied": {}, "retryable": {},
 	"event_id": {}, "requested_count": {}, "deleted_events": {}, "deleted_jobs": {},
 	"matched_count": {}, "snapshot_max_id": {}, "filter_hash": {}, "confirm": {},
+	"ecosystem_client_id": {}, "ecosystem_resource": {},
 }
 
 // SetAuditExtra adds allowlisted, scalar details to the current audit entry.
@@ -109,6 +110,10 @@ func truncateAuditExtraString(value string, limit int) string {
 
 // auditSensitiveReads 需要审计的敏感 GET 读取（method+FullPath → 动作名）。
 var auditSensitiveReads = map[string]string{
+	"GET /api/v1/ecosystem/me":                    "ecosystem.me.read",
+	"GET /api/v1/ecosystem/groups":                "ecosystem.groups.read",
+	"GET /api/v1/ecosystem/models":                "ecosystem.models.read",
+	"GET /api/v1/ecosystem/keys":                  "ecosystem.keys.read",
 	"GET /api/v1/admin/accounts/data":             "admin.accounts.export",
 	"GET /api/v1/admin/proxies/data":              "admin.proxies.export",
 	"GET /api/v1/admin/redeem-codes/export":       "admin.redeem_codes.export",
