@@ -3816,6 +3816,29 @@
                     />
                   </div>
                 </div>
+
+                <div class="mt-6 border-t border-gray-200 pt-6 dark:border-dark-700">
+                  <h4 class="mb-1 text-sm font-semibold text-gray-900 dark:text-white">
+                    {{ t("admin.settings.oidc.ecosystemTitle") }}
+                  </h4>
+                  <p class="mb-4 text-xs text-gray-500 dark:text-gray-400">{{ t("admin.settings.oidc.ecosystemDescription") }}</p>
+                  <div class="mb-4 flex items-center justify-between rounded border border-gray-200 px-4 py-3 dark:border-dark-700">
+                    <span class="font-medium text-gray-900 dark:text-white">{{ t("admin.settings.oidc.ecosystemEnabled") }}</span>
+                    <Toggle v-model="form.ecosystem_enabled" />
+                  </div>
+                  <div class="grid grid-cols-1 gap-6 lg:grid-cols-2">
+                    <div v-for="field in ecosystemTextFields" :key="field.key">
+                      <label class="mb-2 block text-sm font-medium text-gray-700 dark:text-gray-300">{{ t(`admin.settings.oidc.${field.label}`) }}</label>
+                      <input v-model="form[field.key]" type="text" class="input font-mono text-sm" />
+                    </div>
+                  </div>
+                  <div class="mt-6 grid grid-cols-1 gap-6 lg:grid-cols-3">
+                    <div v-for="field in ecosystemNumberFields" :key="field.key">
+                      <label class="mb-2 block text-sm font-medium text-gray-700 dark:text-gray-300">{{ t(`admin.settings.oidc.${field.label}`) }}</label>
+                      <input v-model.number="form[field.key]" type="number" min="0" class="input" />
+                    </div>
+                  </div>
+                </div>
               </div>
             </div>
           </div>
@@ -9588,6 +9611,24 @@ type SettingsForm = Omit<
 
 const schedulingThresholdPlatforms = SCHEDULING_THRESHOLD_PLATFORMS;
 
+const ecosystemTextFields = [
+  { key: "ecosystem_issuer_url", label: "ecosystemIssuerUrl" },
+  { key: "ecosystem_audience", label: "ecosystemAudience" },
+  { key: "ecosystem_jwks_url", label: "ecosystemJwksUrl" },
+  { key: "ecosystem_allowed_client_ids", label: "ecosystemAllowedClientIds" },
+  { key: "ecosystem_public_gateway_url", label: "ecosystemPublicGatewayUrl" },
+  { key: "ecosystem_allowed_signing_algs", label: "ecosystemAllowedSigningAlgs" },
+] as const;
+
+const ecosystemNumberFields = [
+  { key: "ecosystem_clock_skew_seconds", label: "ecosystemClockSkewSeconds" },
+  { key: "ecosystem_jwks_request_timeout_seconds", label: "ecosystemJwksRequestTimeoutSeconds" },
+  { key: "ecosystem_jwks_max_response_bytes", label: "ecosystemJwksMaxResponseBytes" },
+  { key: "ecosystem_jwks_cache_ttl_seconds", label: "ecosystemJwksCacheTtlSeconds" },
+  { key: "ecosystem_jwks_refresh_min_interval_seconds", label: "ecosystemJwksRefreshMinIntervalSeconds" },
+  { key: "ecosystem_rate_limit_per_minute", label: "ecosystemRateLimitPerMinute" },
+] as const;
+
 const form = reactive<SettingsForm>({
   registration_enabled: true,
   email_verify_enabled: false,
@@ -9773,6 +9814,19 @@ const form = reactive<SettingsForm>({
   oidc_connect_userinfo_email_path: "",
   oidc_connect_userinfo_id_path: "",
   oidc_connect_userinfo_username_path: "",
+  ecosystem_enabled: false,
+  ecosystem_issuer_url: "",
+  ecosystem_audience: "",
+  ecosystem_jwks_url: "",
+  ecosystem_allowed_client_ids: "",
+  ecosystem_public_gateway_url: "",
+  ecosystem_allowed_signing_algs: "RS256,ES256,PS256",
+  ecosystem_clock_skew_seconds: 120,
+  ecosystem_jwks_request_timeout_seconds: 10,
+  ecosystem_jwks_max_response_bytes: 1048576,
+  ecosystem_jwks_cache_ttl_seconds: 300,
+  ecosystem_jwks_refresh_min_interval_seconds: 60,
+  ecosystem_rate_limit_per_minute: 120,
   // GitHub / Google 邮箱快捷登录
   github_oauth_enabled: false,
   github_oauth_client_id: "",
@@ -11394,6 +11448,19 @@ async function saveSettings() {
       oidc_connect_userinfo_id_path: form.oidc_connect_userinfo_id_path,
       oidc_connect_userinfo_username_path:
         form.oidc_connect_userinfo_username_path,
+      ecosystem_enabled: form.ecosystem_enabled,
+      ecosystem_issuer_url: form.ecosystem_issuer_url,
+      ecosystem_audience: form.ecosystem_audience,
+      ecosystem_jwks_url: form.ecosystem_jwks_url,
+      ecosystem_allowed_client_ids: form.ecosystem_allowed_client_ids,
+      ecosystem_public_gateway_url: form.ecosystem_public_gateway_url,
+      ecosystem_allowed_signing_algs: form.ecosystem_allowed_signing_algs,
+      ecosystem_clock_skew_seconds: form.ecosystem_clock_skew_seconds,
+      ecosystem_jwks_request_timeout_seconds: form.ecosystem_jwks_request_timeout_seconds,
+      ecosystem_jwks_max_response_bytes: form.ecosystem_jwks_max_response_bytes,
+      ecosystem_jwks_cache_ttl_seconds: form.ecosystem_jwks_cache_ttl_seconds,
+      ecosystem_jwks_refresh_min_interval_seconds: form.ecosystem_jwks_refresh_min_interval_seconds,
+      ecosystem_rate_limit_per_minute: form.ecosystem_rate_limit_per_minute,
       github_oauth_enabled: form.github_oauth_enabled,
       github_oauth_client_id: form.github_oauth_client_id,
       github_oauth_client_secret:

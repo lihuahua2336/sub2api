@@ -400,6 +400,21 @@ export default {
         userinfoIdPathPlaceholder: 'for example data.id',
         userinfoUsernamePath: 'UserInfo Username Path',
         userinfoUsernamePathPlaceholder: 'for example data.username'
+        ,ecosystemTitle: 'Logto Ecosystem Adapter'
+        ,ecosystemDescription: 'Configure access-token verification, gateway, and rate limiting for Logto resource APIs.'
+        ,ecosystemEnabled: 'Enable Logto ecosystem adapter'
+        ,ecosystemIssuerUrl: 'Issuer URL'
+        ,ecosystemAudience: 'Audience'
+        ,ecosystemJwksUrl: 'JWKS URL'
+        ,ecosystemAllowedClientIds: 'Allowed Client IDs (comma-separated)'
+        ,ecosystemPublicGatewayUrl: 'Public Gateway URL'
+        ,ecosystemAllowedSigningAlgs: 'Allowed Signing Algorithms (comma-separated)'
+        ,ecosystemClockSkewSeconds: 'Clock Skew (seconds)'
+        ,ecosystemJwksRequestTimeoutSeconds: 'JWKS Request Timeout (seconds)'
+        ,ecosystemJwksMaxResponseBytes: 'JWKS Max Response Bytes'
+        ,ecosystemJwksCacheTtlSeconds: 'JWKS Cache TTL (seconds)'
+        ,ecosystemJwksRefreshMinIntervalSeconds: 'JWKS Minimum Refresh Interval (seconds)'
+        ,ecosystemRateLimitPerMinute: 'Rate Limit (requests/minute)'
       },
       defaults: {
         title: 'Default User Settings',

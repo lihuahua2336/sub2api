@@ -5,6 +5,7 @@ import (
 	"crypto/ecdsa"
 	"crypto/elliptic"
 	"crypto/rsa"
+	"crypto/sha256"
 	"encoding/base64"
 	"encoding/json"
 	"errors"
@@ -61,11 +62,11 @@ type ecosystemJWKS struct {
 }
 
 type EcosystemTokenVerifier struct {
-	cfg     config.EcosystemConfig
-	client  *http.Client
-	allowed map[string]struct{}
+	configSource func() config.EcosystemConfig
+	client       *http.Client
 
 	mu                 sync.RWMutex
+	configFingerprint  [sha256.Size]byte
 	keys               map[string]any
 	expiresAt          time.Time
 	lastRefresh        time.Time
@@ -77,33 +78,37 @@ func NewEcosystemTokenVerifier(cfg config.EcosystemConfig, client *http.Client) 
 	if client == nil {
 		client = http.DefaultClient
 	}
-	allowed := make(map[string]struct{}, len(cfg.AllowedClientIDs))
-	for _, clientID := range cfg.AllowedClientIDs {
-		if clientID = strings.TrimSpace(clientID); clientID != "" {
-			allowed[clientID] = struct{}{}
-		}
-	}
+	snapshot := cfg
 	return &EcosystemTokenVerifier{
-		cfg: cfg, client: client, allowed: allowed, keys: make(map[string]any),
+		configSource: func() config.EcosystemConfig { return snapshot },
+		client:       client,
+		keys:         make(map[string]any),
 	}
 }
 
 func ProvideEcosystemTokenVerifier(cfg *config.Config) *EcosystemTokenVerifier {
-	client := &http.Client{Timeout: time.Duration(cfg.Ecosystem.JWKSRequestTimeoutSeconds) * time.Second}
-	return NewEcosystemTokenVerifier(cfg.Ecosystem, client)
+	verifier := NewEcosystemTokenVerifier(cfg.EcosystemSettings(), http.DefaultClient)
+	verifier.configSource = cfg.EcosystemSettings
+	return verifier
 }
 
 func (v *EcosystemTokenVerifier) Verify(ctx context.Context, rawToken, requiredScope string) (*EcosystemTokenIdentity, error) {
-	if v == nil || !v.cfg.Enabled || strings.TrimSpace(rawToken) == "" {
+	if v == nil || v.configSource == nil || strings.TrimSpace(rawToken) == "" {
 		return nil, ErrInvalidLogtoToken
 	}
+	cfg := v.configSource()
+	if !cfg.Enabled {
+		return nil, ErrInvalidLogtoToken
+	}
+	fingerprint := ecosystemConfigFingerprint(cfg)
+	v.ensureConfigFingerprint(fingerprint)
 	parser := jwt.NewParser(
-		jwt.WithValidMethods(v.cfg.AllowedSigningAlgs),
-		jwt.WithIssuer(v.cfg.IssuerURL),
-		jwt.WithAudience(v.cfg.Audience),
+		jwt.WithValidMethods(cfg.AllowedSigningAlgs),
+		jwt.WithIssuer(cfg.IssuerURL),
+		jwt.WithAudience(cfg.Audience),
 		jwt.WithExpirationRequired(),
 		jwt.WithIssuedAt(),
-		jwt.WithLeeway(time.Duration(v.cfg.ClockSkewSeconds)*time.Second),
+		jwt.WithLeeway(time.Duration(cfg.ClockSkewSeconds)*time.Second),
 	)
 	claims := jwt.MapClaims{}
 	_, err := parser.ParseWithClaims(rawToken, claims, func(token *jwt.Token) (any, error) {
@@ -114,7 +119,7 @@ func (v *EcosystemTokenVerifier) Verify(ctx context.Context, rawToken, requiredS
 		if !ok || strings.TrimSpace(kid) == "" {
 			return nil, errors.New("token kid is missing")
 		}
-		return v.key(ctx, kid)
+		return v.key(ctx, kid, cfg, fingerprint)
 	})
 	if err != nil {
 		if errors.Is(err, errEcosystemJWKSUnavailable) {
@@ -138,7 +143,7 @@ func (v *EcosystemTokenVerifier) Verify(ctx context.Context, rawToken, requiredS
 	if !ok || clientID == "" {
 		return nil, ErrEcosystemClientNotAllowed
 	}
-	if _, ok := v.allowed[clientID]; !ok {
+	if !ecosystemClientAllowed(cfg.AllowedClientIDs, clientID) {
 		return nil, ErrEcosystemClientNotAllowed
 	}
 	// Logto client-credentials tokens use the application as subject. Keep this
@@ -158,13 +163,40 @@ func (v *EcosystemTokenVerifier) Verify(ctx context.Context, rawToken, requiredS
 		return nil, ErrInsufficientEcosystemScope
 	}
 	return &EcosystemTokenIdentity{
-		Issuer: v.cfg.IssuerURL, Subject: subject, ClientID: clientID, Scopes: scopes,
+		Issuer: cfg.IssuerURL, Subject: subject, ClientID: clientID, Scopes: scopes,
 	}, nil
+}
+
+func ecosystemClientAllowed(allowed []string, clientID string) bool {
+	for _, candidate := range allowed {
+		if strings.TrimSpace(candidate) == clientID {
+			return true
+		}
+	}
+	return false
+}
+
+func ecosystemConfigFingerprint(cfg config.EcosystemConfig) [sha256.Size]byte {
+	payload, _ := json.Marshal(cfg)
+	return sha256.Sum256(payload)
+}
+
+func (v *EcosystemTokenVerifier) ensureConfigFingerprint(fingerprint [sha256.Size]byte) {
+	v.mu.Lock()
+	defer v.mu.Unlock()
+	if v.configFingerprint == fingerprint {
+		return
+	}
+	v.configFingerprint = fingerprint
+	v.keys = make(map[string]any)
+	v.expiresAt = time.Time{}
+	v.lastRefresh = time.Time{}
+	v.lastUnknownRefresh = time.Time{}
 }
 
 var errEcosystemJWKSUnavailable = errors.New("ecosystem JWKS unavailable")
 
-func (v *EcosystemTokenVerifier) key(ctx context.Context, kid string) (any, error) {
+func (v *EcosystemTokenVerifier) key(ctx context.Context, kid string, cfg config.EcosystemConfig, fingerprint [sha256.Size]byte) (any, error) {
 	now := time.Now()
 	v.mu.RLock()
 	key, found := v.keys[kid]
@@ -174,7 +206,7 @@ func (v *EcosystemTokenVerifier) key(ctx context.Context, kid string) (any, erro
 	if found && fresh {
 		return key, nil
 	}
-	minInterval := time.Duration(v.cfg.JWKSRefreshMinIntervalSeconds) * time.Second
+	minInterval := time.Duration(cfg.JWKSRefreshMinIntervalSeconds) * time.Second
 	if hasKeys && fresh {
 		v.mu.Lock()
 		if minInterval > 0 && now.Sub(v.lastUnknownRefresh) < minInterval {
@@ -184,11 +216,14 @@ func (v *EcosystemTokenVerifier) key(ctx context.Context, kid string) (any, erro
 		v.lastUnknownRefresh = now
 		v.mu.Unlock()
 	}
-	if err := v.refreshKeys(ctx); err != nil {
+	if err := v.refreshKeys(ctx, cfg, fingerprint); err != nil {
 		return nil, err
 	}
 	v.mu.RLock()
 	defer v.mu.RUnlock()
+	if v.configFingerprint != fingerprint {
+		return nil, errEcosystemJWKSUnavailable
+	}
 	key, found = v.keys[kid]
 	if !found {
 		return nil, fmt.Errorf("unknown token kid")
@@ -196,9 +231,9 @@ func (v *EcosystemTokenVerifier) key(ctx context.Context, kid string) (any, erro
 	return key, nil
 }
 
-func (v *EcosystemTokenVerifier) refreshKeys(ctx context.Context) error {
-	result := v.refresh.DoChan("jwks", func() (any, error) {
-		return nil, v.fetchKeys(context.Background())
+func (v *EcosystemTokenVerifier) refreshKeys(ctx context.Context, cfg config.EcosystemConfig, fingerprint [sha256.Size]byte) error {
+	result := v.refresh.DoChan(fmt.Sprintf("jwks:%x", fingerprint), func() (any, error) {
+		return nil, v.fetchKeys(context.Background(), cfg, fingerprint)
 	})
 	select {
 	case <-ctx.Done():
@@ -208,14 +243,14 @@ func (v *EcosystemTokenVerifier) refreshKeys(ctx context.Context) error {
 	}
 }
 
-func (v *EcosystemTokenVerifier) fetchKeys(parent context.Context) error {
-	timeout := time.Duration(v.cfg.JWKSRequestTimeoutSeconds) * time.Second
+func (v *EcosystemTokenVerifier) fetchKeys(parent context.Context, cfg config.EcosystemConfig, fingerprint [sha256.Size]byte) error {
+	timeout := time.Duration(cfg.JWKSRequestTimeoutSeconds) * time.Second
 	if timeout <= 0 {
 		timeout = 5 * time.Second
 	}
 	ctx, cancel := context.WithTimeout(parent, timeout)
 	defer cancel()
-	req, err := http.NewRequestWithContext(ctx, http.MethodGet, v.cfg.JWKSURL, nil)
+	req, err := http.NewRequestWithContext(ctx, http.MethodGet, cfg.JWKSURL, nil)
 	if err != nil {
 		return fmt.Errorf("%w: create request", errEcosystemJWKSUnavailable)
 	}
@@ -227,7 +262,7 @@ func (v *EcosystemTokenVerifier) fetchKeys(parent context.Context) error {
 	if resp.StatusCode < 200 || resp.StatusCode >= 300 {
 		return fmt.Errorf("%w: unexpected status", errEcosystemJWKSUnavailable)
 	}
-	limit := v.cfg.JWKSMaxResponseBytes
+	limit := cfg.JWKSMaxResponseBytes
 	if limit <= 0 {
 		limit = 1 << 20
 	}
@@ -253,11 +288,15 @@ func (v *EcosystemTokenVerifier) fetchKeys(parent context.Context) error {
 		return fmt.Errorf("%w: no usable signing keys", errEcosystemJWKSUnavailable)
 	}
 	now := time.Now()
-	ttl := time.Duration(v.cfg.JWKSCacheTTLSeconds) * time.Second
+	ttl := time.Duration(cfg.JWKSCacheTTLSeconds) * time.Second
 	if ttl <= 0 {
 		ttl = 5 * time.Minute
 	}
 	v.mu.Lock()
+	if v.configFingerprint != fingerprint {
+		v.mu.Unlock()
+		return errEcosystemJWKSUnavailable
+	}
 	v.keys = keys
 	v.lastRefresh = now
 	v.expiresAt = now.Add(ttl)

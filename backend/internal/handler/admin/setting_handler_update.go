@@ -118,28 +118,41 @@ type UpdateSettingsRequest struct {
 	WeChatConnectFrontendRedirectURL string `json:"wechat_connect_frontend_redirect_url"`
 
 	// Generic OIDC OAuth 登录
-	OIDCConnectEnabled              bool   `json:"oidc_connect_enabled"`
-	OIDCConnectProviderName         string `json:"oidc_connect_provider_name"`
-	OIDCConnectClientID             string `json:"oidc_connect_client_id"`
-	OIDCConnectClientSecret         string `json:"oidc_connect_client_secret"`
-	OIDCConnectIssuerURL            string `json:"oidc_connect_issuer_url"`
-	OIDCConnectDiscoveryURL         string `json:"oidc_connect_discovery_url"`
-	OIDCConnectAuthorizeURL         string `json:"oidc_connect_authorize_url"`
-	OIDCConnectTokenURL             string `json:"oidc_connect_token_url"`
-	OIDCConnectUserInfoURL          string `json:"oidc_connect_userinfo_url"`
-	OIDCConnectJWKSURL              string `json:"oidc_connect_jwks_url"`
-	OIDCConnectScopes               string `json:"oidc_connect_scopes"`
-	OIDCConnectRedirectURL          string `json:"oidc_connect_redirect_url"`
-	OIDCConnectFrontendRedirectURL  string `json:"oidc_connect_frontend_redirect_url"`
-	OIDCConnectTokenAuthMethod      string `json:"oidc_connect_token_auth_method"`
-	OIDCConnectUsePKCE              *bool  `json:"oidc_connect_use_pkce"`
-	OIDCConnectValidateIDToken      *bool  `json:"oidc_connect_validate_id_token"`
-	OIDCConnectAllowedSigningAlgs   string `json:"oidc_connect_allowed_signing_algs"`
-	OIDCConnectClockSkewSeconds     int    `json:"oidc_connect_clock_skew_seconds"`
-	OIDCConnectRequireEmailVerified bool   `json:"oidc_connect_require_email_verified"`
-	OIDCConnectUserInfoEmailPath    string `json:"oidc_connect_userinfo_email_path"`
-	OIDCConnectUserInfoIDPath       string `json:"oidc_connect_userinfo_id_path"`
-	OIDCConnectUserInfoUsernamePath string `json:"oidc_connect_userinfo_username_path"`
+	OIDCConnectEnabled                     bool   `json:"oidc_connect_enabled"`
+	OIDCConnectProviderName                string `json:"oidc_connect_provider_name"`
+	OIDCConnectClientID                    string `json:"oidc_connect_client_id"`
+	OIDCConnectClientSecret                string `json:"oidc_connect_client_secret"`
+	OIDCConnectIssuerURL                   string `json:"oidc_connect_issuer_url"`
+	OIDCConnectDiscoveryURL                string `json:"oidc_connect_discovery_url"`
+	OIDCConnectAuthorizeURL                string `json:"oidc_connect_authorize_url"`
+	OIDCConnectTokenURL                    string `json:"oidc_connect_token_url"`
+	OIDCConnectUserInfoURL                 string `json:"oidc_connect_userinfo_url"`
+	OIDCConnectJWKSURL                     string `json:"oidc_connect_jwks_url"`
+	OIDCConnectScopes                      string `json:"oidc_connect_scopes"`
+	OIDCConnectRedirectURL                 string `json:"oidc_connect_redirect_url"`
+	OIDCConnectFrontendRedirectURL         string `json:"oidc_connect_frontend_redirect_url"`
+	OIDCConnectTokenAuthMethod             string `json:"oidc_connect_token_auth_method"`
+	OIDCConnectUsePKCE                     *bool  `json:"oidc_connect_use_pkce"`
+	OIDCConnectValidateIDToken             *bool  `json:"oidc_connect_validate_id_token"`
+	OIDCConnectAllowedSigningAlgs          string `json:"oidc_connect_allowed_signing_algs"`
+	OIDCConnectClockSkewSeconds            int    `json:"oidc_connect_clock_skew_seconds"`
+	OIDCConnectRequireEmailVerified        bool   `json:"oidc_connect_require_email_verified"`
+	OIDCConnectUserInfoEmailPath           string `json:"oidc_connect_userinfo_email_path"`
+	OIDCConnectUserInfoIDPath              string `json:"oidc_connect_userinfo_id_path"`
+	OIDCConnectUserInfoUsernamePath        string `json:"oidc_connect_userinfo_username_path"`
+	EcosystemEnabled                       bool   `json:"ecosystem_enabled"`
+	EcosystemIssuerURL                     string `json:"ecosystem_issuer_url"`
+	EcosystemAudience                      string `json:"ecosystem_audience"`
+	EcosystemJWKSURL                       string `json:"ecosystem_jwks_url"`
+	EcosystemAllowedClientIDs              string `json:"ecosystem_allowed_client_ids"`
+	EcosystemPublicGatewayURL              string `json:"ecosystem_public_gateway_url"`
+	EcosystemAllowedSigningAlgs            string `json:"ecosystem_allowed_signing_algs"`
+	EcosystemClockSkewSeconds              int    `json:"ecosystem_clock_skew_seconds"`
+	EcosystemJWKSRequestTimeoutSeconds     int    `json:"ecosystem_jwks_request_timeout_seconds"`
+	EcosystemJWKSMaxResponseBytes          int64  `json:"ecosystem_jwks_max_response_bytes"`
+	EcosystemJWKSCacheTTLSeconds           int    `json:"ecosystem_jwks_cache_ttl_seconds"`
+	EcosystemJWKSRefreshMinIntervalSeconds int    `json:"ecosystem_jwks_refresh_min_interval_seconds"`
+	EcosystemRateLimitPerMinute            int    `json:"ecosystem_rate_limit_per_minute"`
 
 	GitHubOAuthEnabled             bool   `json:"github_oauth_enabled"`
 	GitHubOAuthClientID            string `json:"github_oauth_client_id"`
@@ -1497,6 +1510,16 @@ func (h *SettingHandler) UpdateSettings(c *gin.Context) {
 		response.BadRequest(c, "cyber_session_block_ttl_seconds must be > 0")
 		return
 	}
+	if req.EcosystemEnabled {
+		if strings.TrimSpace(req.EcosystemIssuerURL) == "" || strings.TrimSpace(req.EcosystemAudience) == "" || strings.TrimSpace(req.EcosystemJWKSURL) == "" || strings.TrimSpace(req.EcosystemAllowedClientIDs) == "" || strings.TrimSpace(req.EcosystemPublicGatewayURL) == "" {
+			response.BadRequest(c, "ecosystem issuer, audience, JWKS URL, allowed client IDs, and public gateway URL are required when enabled")
+			return
+		}
+		if req.EcosystemClockSkewSeconds < 0 || req.EcosystemClockSkewSeconds > 600 || req.EcosystemJWKSRequestTimeoutSeconds < 1 || req.EcosystemJWKSRequestTimeoutSeconds > 30 || req.EcosystemJWKSMaxResponseBytes < 1024 || req.EcosystemJWKSMaxResponseBytes > 16*1024*1024 || req.EcosystemJWKSCacheTTLSeconds < 1 || req.EcosystemJWKSCacheTTLSeconds > 86400 || req.EcosystemJWKSRefreshMinIntervalSeconds < 1 || req.EcosystemJWKSRefreshMinIntervalSeconds > 3600 || req.EcosystemRateLimitPerMinute < 1 || req.EcosystemRateLimitPerMinute > 10000 {
+			response.BadRequest(c, "ecosystem numeric settings are outside the allowed range")
+			return
+		}
+	}
 
 	settings := &service.SystemSettings{
 		// 系统全局 platform quota 默认值（整体替换语义）
@@ -1607,6 +1630,19 @@ func (h *SettingHandler) UpdateSettings(c *gin.Context) {
 		OIDCConnectUserInfoEmailPath:           req.OIDCConnectUserInfoEmailPath,
 		OIDCConnectUserInfoIDPath:              req.OIDCConnectUserInfoIDPath,
 		OIDCConnectUserInfoUsernamePath:        req.OIDCConnectUserInfoUsernamePath,
+		EcosystemEnabled:                       req.EcosystemEnabled,
+		EcosystemIssuerURL:                     req.EcosystemIssuerURL,
+		EcosystemAudience:                      req.EcosystemAudience,
+		EcosystemJWKSURL:                       req.EcosystemJWKSURL,
+		EcosystemAllowedClientIDs:              req.EcosystemAllowedClientIDs,
+		EcosystemPublicGatewayURL:              req.EcosystemPublicGatewayURL,
+		EcosystemAllowedSigningAlgs:            req.EcosystemAllowedSigningAlgs,
+		EcosystemClockSkewSeconds:              req.EcosystemClockSkewSeconds,
+		EcosystemJWKSRequestTimeoutSeconds:     req.EcosystemJWKSRequestTimeoutSeconds,
+		EcosystemJWKSMaxResponseBytes:          req.EcosystemJWKSMaxResponseBytes,
+		EcosystemJWKSCacheTTLSeconds:           req.EcosystemJWKSCacheTTLSeconds,
+		EcosystemJWKSRefreshMinIntervalSeconds: req.EcosystemJWKSRefreshMinIntervalSeconds,
+		EcosystemRateLimitPerMinute:            req.EcosystemRateLimitPerMinute,
 		GitHubOAuthEnabled:                     req.GitHubOAuthEnabled,
 		GitHubOAuthClientID:                    req.GitHubOAuthClientID,
 		GitHubOAuthClientSecret:                req.GitHubOAuthClientSecret,
@@ -2247,6 +2283,19 @@ func (h *SettingHandler) UpdateSettings(c *gin.Context) {
 		OIDCConnectUserInfoEmailPath:                           updatedSettings.OIDCConnectUserInfoEmailPath,
 		OIDCConnectUserInfoIDPath:                              updatedSettings.OIDCConnectUserInfoIDPath,
 		OIDCConnectUserInfoUsernamePath:                        updatedSettings.OIDCConnectUserInfoUsernamePath,
+		EcosystemEnabled:                                       updatedSettings.EcosystemEnabled,
+		EcosystemIssuerURL:                                     updatedSettings.EcosystemIssuerURL,
+		EcosystemAudience:                                      updatedSettings.EcosystemAudience,
+		EcosystemJWKSURL:                                       updatedSettings.EcosystemJWKSURL,
+		EcosystemAllowedClientIDs:                              updatedSettings.EcosystemAllowedClientIDs,
+		EcosystemPublicGatewayURL:                              updatedSettings.EcosystemPublicGatewayURL,
+		EcosystemAllowedSigningAlgs:                            updatedSettings.EcosystemAllowedSigningAlgs,
+		EcosystemClockSkewSeconds:                              updatedSettings.EcosystemClockSkewSeconds,
+		EcosystemJWKSRequestTimeoutSeconds:                     updatedSettings.EcosystemJWKSRequestTimeoutSeconds,
+		EcosystemJWKSMaxResponseBytes:                          updatedSettings.EcosystemJWKSMaxResponseBytes,
+		EcosystemJWKSCacheTTLSeconds:                           updatedSettings.EcosystemJWKSCacheTTLSeconds,
+		EcosystemJWKSRefreshMinIntervalSeconds:                 updatedSettings.EcosystemJWKSRefreshMinIntervalSeconds,
+		EcosystemRateLimitPerMinute:                            updatedSettings.EcosystemRateLimitPerMinute,
 		GitHubOAuthEnabled:                                     updatedSettings.GitHubOAuthEnabled,
 		GitHubOAuthClientID:                                    updatedSettings.GitHubOAuthClientID,
 		GitHubOAuthClientSecretConfigured:                      updatedSettings.GitHubOAuthClientSecretConfigured,

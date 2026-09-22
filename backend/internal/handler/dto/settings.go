@@ -115,28 +115,41 @@ type SystemSettings struct {
 	WeChatConnectRedirectURL               string `json:"wechat_connect_redirect_url"`
 	WeChatConnectFrontendRedirectURL       string `json:"wechat_connect_frontend_redirect_url"`
 
-	OIDCConnectEnabled                bool   `json:"oidc_connect_enabled"`
-	OIDCConnectProviderName           string `json:"oidc_connect_provider_name"`
-	OIDCConnectClientID               string `json:"oidc_connect_client_id"`
-	OIDCConnectClientSecretConfigured bool   `json:"oidc_connect_client_secret_configured"`
-	OIDCConnectIssuerURL              string `json:"oidc_connect_issuer_url"`
-	OIDCConnectDiscoveryURL           string `json:"oidc_connect_discovery_url"`
-	OIDCConnectAuthorizeURL           string `json:"oidc_connect_authorize_url"`
-	OIDCConnectTokenURL               string `json:"oidc_connect_token_url"`
-	OIDCConnectUserInfoURL            string `json:"oidc_connect_userinfo_url"`
-	OIDCConnectJWKSURL                string `json:"oidc_connect_jwks_url"`
-	OIDCConnectScopes                 string `json:"oidc_connect_scopes"`
-	OIDCConnectRedirectURL            string `json:"oidc_connect_redirect_url"`
-	OIDCConnectFrontendRedirectURL    string `json:"oidc_connect_frontend_redirect_url"`
-	OIDCConnectTokenAuthMethod        string `json:"oidc_connect_token_auth_method"`
-	OIDCConnectUsePKCE                bool   `json:"oidc_connect_use_pkce"`
-	OIDCConnectValidateIDToken        bool   `json:"oidc_connect_validate_id_token"`
-	OIDCConnectAllowedSigningAlgs     string `json:"oidc_connect_allowed_signing_algs"`
-	OIDCConnectClockSkewSeconds       int    `json:"oidc_connect_clock_skew_seconds"`
-	OIDCConnectRequireEmailVerified   bool   `json:"oidc_connect_require_email_verified"`
-	OIDCConnectUserInfoEmailPath      string `json:"oidc_connect_userinfo_email_path"`
-	OIDCConnectUserInfoIDPath         string `json:"oidc_connect_userinfo_id_path"`
-	OIDCConnectUserInfoUsernamePath   string `json:"oidc_connect_userinfo_username_path"`
+	OIDCConnectEnabled                     bool   `json:"oidc_connect_enabled"`
+	OIDCConnectProviderName                string `json:"oidc_connect_provider_name"`
+	OIDCConnectClientID                    string `json:"oidc_connect_client_id"`
+	OIDCConnectClientSecretConfigured      bool   `json:"oidc_connect_client_secret_configured"`
+	OIDCConnectIssuerURL                   string `json:"oidc_connect_issuer_url"`
+	OIDCConnectDiscoveryURL                string `json:"oidc_connect_discovery_url"`
+	OIDCConnectAuthorizeURL                string `json:"oidc_connect_authorize_url"`
+	OIDCConnectTokenURL                    string `json:"oidc_connect_token_url"`
+	OIDCConnectUserInfoURL                 string `json:"oidc_connect_userinfo_url"`
+	OIDCConnectJWKSURL                     string `json:"oidc_connect_jwks_url"`
+	OIDCConnectScopes                      string `json:"oidc_connect_scopes"`
+	OIDCConnectRedirectURL                 string `json:"oidc_connect_redirect_url"`
+	OIDCConnectFrontendRedirectURL         string `json:"oidc_connect_frontend_redirect_url"`
+	OIDCConnectTokenAuthMethod             string `json:"oidc_connect_token_auth_method"`
+	OIDCConnectUsePKCE                     bool   `json:"oidc_connect_use_pkce"`
+	OIDCConnectValidateIDToken             bool   `json:"oidc_connect_validate_id_token"`
+	OIDCConnectAllowedSigningAlgs          string `json:"oidc_connect_allowed_signing_algs"`
+	OIDCConnectClockSkewSeconds            int    `json:"oidc_connect_clock_skew_seconds"`
+	OIDCConnectRequireEmailVerified        bool   `json:"oidc_connect_require_email_verified"`
+	OIDCConnectUserInfoEmailPath           string `json:"oidc_connect_userinfo_email_path"`
+	OIDCConnectUserInfoIDPath              string `json:"oidc_connect_userinfo_id_path"`
+	OIDCConnectUserInfoUsernamePath        string `json:"oidc_connect_userinfo_username_path"`
+	EcosystemEnabled                       bool   `json:"ecosystem_enabled"`
+	EcosystemIssuerURL                     string `json:"ecosystem_issuer_url"`
+	EcosystemAudience                      string `json:"ecosystem_audience"`
+	EcosystemJWKSURL                       string `json:"ecosystem_jwks_url"`
+	EcosystemAllowedClientIDs              string `json:"ecosystem_allowed_client_ids"`
+	EcosystemPublicGatewayURL              string `json:"ecosystem_public_gateway_url"`
+	EcosystemAllowedSigningAlgs            string `json:"ecosystem_allowed_signing_algs"`
+	EcosystemClockSkewSeconds              int    `json:"ecosystem_clock_skew_seconds"`
+	EcosystemJWKSRequestTimeoutSeconds     int    `json:"ecosystem_jwks_request_timeout_seconds"`
+	EcosystemJWKSMaxResponseBytes          int64  `json:"ecosystem_jwks_max_response_bytes"`
+	EcosystemJWKSCacheTTLSeconds           int    `json:"ecosystem_jwks_cache_ttl_seconds"`
+	EcosystemJWKSRefreshMinIntervalSeconds int    `json:"ecosystem_jwks_refresh_min_interval_seconds"`
+	EcosystemRateLimitPerMinute            int    `json:"ecosystem_rate_limit_per_minute"`
 
 	GitHubOAuthEnabled                bool   `json:"github_oauth_enabled"`
 	GitHubOAuthClientID               string `json:"github_oauth_client_id"`

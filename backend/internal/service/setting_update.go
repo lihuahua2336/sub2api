@@ -16,6 +16,17 @@ import (
 	infraerrors "github.com/Wei-Shaw/sub2api/internal/pkg/errors"
 )
 
+func splitSettingList(value string) []string {
+	parts := strings.Split(value, ",")
+	result := make([]string, 0, len(parts))
+	for _, part := range parts {
+		if part = strings.TrimSpace(part); part != "" {
+			result = append(result, part)
+		}
+	}
+	return result
+}
+
 // OmittedSettingKeys marks setting keys the caller's payload never carried.
 // SystemSettings is a plain struct, so a field the caller omitted arrives as a
 // zero value and is indistinguishable from a deliberate clear. Listing the key
@@ -292,6 +303,19 @@ func (s *SettingService) buildSystemSettingsUpdates(ctx context.Context, setting
 	if settings.OIDCConnectClientSecret != "" {
 		updates[SettingKeyOIDCConnectClientSecret] = settings.OIDCConnectClientSecret
 	}
+	updates[SettingKeyEcosystemEnabled] = strconv.FormatBool(settings.EcosystemEnabled)
+	updates[SettingKeyEcosystemIssuerURL] = settings.EcosystemIssuerURL
+	updates[SettingKeyEcosystemAudience] = settings.EcosystemAudience
+	updates[SettingKeyEcosystemJWKSURL] = settings.EcosystemJWKSURL
+	updates[SettingKeyEcosystemAllowedClientIDs] = settings.EcosystemAllowedClientIDs
+	updates[SettingKeyEcosystemPublicGatewayURL] = settings.EcosystemPublicGatewayURL
+	updates[SettingKeyEcosystemAllowedSigningAlgs] = settings.EcosystemAllowedSigningAlgs
+	updates[SettingKeyEcosystemClockSkewSeconds] = strconv.Itoa(settings.EcosystemClockSkewSeconds)
+	updates[SettingKeyEcosystemJWKSRequestTimeoutSeconds] = strconv.Itoa(settings.EcosystemJWKSRequestTimeoutSeconds)
+	updates[SettingKeyEcosystemJWKSMaxResponseBytes] = strconv.FormatInt(settings.EcosystemJWKSMaxResponseBytes, 10)
+	updates[SettingKeyEcosystemJWKSCacheTTLSeconds] = strconv.Itoa(settings.EcosystemJWKSCacheTTLSeconds)
+	updates[SettingKeyEcosystemJWKSRefreshMinIntervalSeconds] = strconv.Itoa(settings.EcosystemJWKSRefreshMinIntervalSeconds)
+	updates[SettingKeyEcosystemRateLimitPerMinute] = strconv.Itoa(settings.EcosystemRateLimitPerMinute)
 
 	// GitHub / Google 邮箱快捷登录
 	updates[SettingKeyGitHubOAuthEnabled] = strconv.FormatBool(settings.GitHubOAuthEnabled)
@@ -691,6 +715,7 @@ func (s *SettingService) refreshCachedSettings(settings *SystemSettings) {
 	if settings == nil {
 		return
 	}
+	s.refreshEcosystemSettings(settings)
 
 	// 先使 inflight singleflight 失效，再刷新缓存，缩小旧值覆盖新值的竞态窗口
 	versionBoundsSF.Forget("version_bounds")
@@ -796,6 +821,36 @@ func (s *SettingService) refreshCachedSettings(settings *SystemSettings) {
 		s.onUpdate() // Invalidate cache after settings update
 	}
 	s.notifyChannelMonitorRuntimeListeners()
+}
+
+func (s *SettingService) refreshEcosystemSettings(settings *SystemSettings) {
+	if s == nil || s.cfg == nil || settings == nil {
+		return
+	}
+	s.cfg.SetEcosystemSettings(config.EcosystemConfig{
+		Enabled:                       settings.EcosystemEnabled,
+		IssuerURL:                     strings.TrimSpace(settings.EcosystemIssuerURL),
+		Audience:                      strings.TrimSpace(settings.EcosystemAudience),
+		JWKSURL:                       strings.TrimSpace(settings.EcosystemJWKSURL),
+		AllowedClientIDs:              splitSettingList(settings.EcosystemAllowedClientIDs),
+		PublicGatewayURL:              strings.TrimRight(strings.TrimSpace(settings.EcosystemPublicGatewayURL), "/"),
+		AllowedSigningAlgs:            splitSettingList(settings.EcosystemAllowedSigningAlgs),
+		ClockSkewSeconds:              settings.EcosystemClockSkewSeconds,
+		JWKSRequestTimeoutSeconds:     settings.EcosystemJWKSRequestTimeoutSeconds,
+		JWKSMaxResponseBytes:          settings.EcosystemJWKSMaxResponseBytes,
+		JWKSCacheTTLSeconds:           settings.EcosystemJWKSCacheTTLSeconds,
+		JWKSRefreshMinIntervalSeconds: settings.EcosystemJWKSRefreshMinIntervalSeconds,
+		RateLimitPerMinute:            settings.EcosystemRateLimitPerMinute,
+	})
+}
+
+func (s *SettingService) LoadEcosystemSettings(ctx context.Context) error {
+	settings, err := s.GetAllSettings(ctx)
+	if err != nil {
+		return err
+	}
+	s.refreshEcosystemSettings(settings)
+	return nil
 }
 
 func (s *SettingService) defaultRewriteMessageCacheControl() bool {

@@ -363,6 +363,20 @@ const (
 	SettingKeyOIDCConnectUserInfoIDPath       = "oidc_connect_userinfo_id_path"
 	SettingKeyOIDCConnectUserInfoUsernamePath = "oidc_connect_userinfo_username_path"
 
+	SettingKeyEcosystemEnabled                       = "ecosystem_enabled"
+	SettingKeyEcosystemIssuerURL                     = "ecosystem_issuer_url"
+	SettingKeyEcosystemAudience                      = "ecosystem_audience"
+	SettingKeyEcosystemJWKSURL                       = "ecosystem_jwks_url"
+	SettingKeyEcosystemAllowedClientIDs              = "ecosystem_allowed_client_ids"
+	SettingKeyEcosystemPublicGatewayURL              = "ecosystem_public_gateway_url"
+	SettingKeyEcosystemAllowedSigningAlgs            = "ecosystem_allowed_signing_algs"
+	SettingKeyEcosystemClockSkewSeconds              = "ecosystem_clock_skew_seconds"
+	SettingKeyEcosystemJWKSRequestTimeoutSeconds     = "ecosystem_jwks_request_timeout_seconds"
+	SettingKeyEcosystemJWKSMaxResponseBytes          = "ecosystem_jwks_max_response_bytes"
+	SettingKeyEcosystemJWKSCacheTTLSeconds           = "ecosystem_jwks_cache_ttl_seconds"
+	SettingKeyEcosystemJWKSRefreshMinIntervalSeconds = "ecosystem_jwks_refresh_min_interval_seconds"
+	SettingKeyEcosystemRateLimitPerMinute            = "ecosystem_rate_limit_per_minute"
+
 	// GitHub / Google 邮箱快捷登录设置
 	SettingKeyGitHubOAuthEnabled             = "github_oauth_enabled"
 	SettingKeyGitHubOAuthClientID            = "github_oauth_client_id"

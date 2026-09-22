@@ -135,6 +135,21 @@ type SystemSettings struct {
 	OIDCConnectUserInfoIDPath         string
 	OIDCConnectUserInfoUsernamePath   string
 
+	// Logto ecosystem resource adapter
+	EcosystemEnabled                       bool
+	EcosystemIssuerURL                     string
+	EcosystemAudience                      string
+	EcosystemJWKSURL                       string
+	EcosystemAllowedClientIDs              string
+	EcosystemPublicGatewayURL              string
+	EcosystemAllowedSigningAlgs            string
+	EcosystemClockSkewSeconds              int
+	EcosystemJWKSRequestTimeoutSeconds     int
+	EcosystemJWKSMaxResponseBytes          int64
+	EcosystemJWKSCacheTTLSeconds           int
+	EcosystemJWKSRefreshMinIntervalSeconds int
+	EcosystemRateLimitPerMinute            int
+
 	// GitHub / Google 邮箱快捷登录
 	GitHubOAuthEnabled                bool
 	GitHubOAuthClientID               string

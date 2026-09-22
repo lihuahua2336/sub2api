@@ -397,6 +397,21 @@ export default {
         userinfoIdPathPlaceholder: '例如 data.id',
         userinfoUsernamePath: 'UserInfo 用户名字段路径',
         userinfoUsernamePathPlaceholder: '例如 data.username'
+        ,ecosystemTitle: 'Logto 生态适配层'
+        ,ecosystemDescription: '为 Logto Access Token 资源接口配置验签、网关和限流参数。'
+        ,ecosystemEnabled: '启用 Logto 生态适配层'
+        ,ecosystemIssuerUrl: 'Issuer URL'
+        ,ecosystemAudience: 'Audience'
+        ,ecosystemJwksUrl: 'JWKS URL'
+        ,ecosystemAllowedClientIds: '允许的 Client ID（逗号分隔）'
+        ,ecosystemPublicGatewayUrl: '公开网关 URL'
+        ,ecosystemAllowedSigningAlgs: '允许的签名算法（逗号分隔）'
+        ,ecosystemClockSkewSeconds: '时钟偏移（秒）'
+        ,ecosystemJwksRequestTimeoutSeconds: 'JWKS 请求超时（秒）'
+        ,ecosystemJwksMaxResponseBytes: 'JWKS 最大响应字节数'
+        ,ecosystemJwksCacheTtlSeconds: 'JWKS 缓存 TTL（秒）'
+        ,ecosystemJwksRefreshMinIntervalSeconds: 'JWKS 最小刷新间隔（秒）'
+        ,ecosystemRateLimitPerMinute: '每分钟限流请求数'
       },
       defaults: {
         title: '用户默认设置',

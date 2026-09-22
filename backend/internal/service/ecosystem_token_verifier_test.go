@@ -189,3 +189,39 @@ func TestEcosystemTokenVerifierReportsJWKSDependencyFailure(t *testing.T) {
 	_, err = verifier.Verify(context.Background(), signEcosystemToken(t, privateKey, "key-1", nil), "ecosystem:me")
 	require.ErrorIs(t, err, ErrEcosystemUnavailable)
 }
+
+func TestEcosystemTokenVerifierUsesRuntimeConfigAndInvalidatesJWKSCache(t *testing.T) {
+	oldKey, err := rsa.GenerateKey(rand.Reader, 2048)
+	require.NoError(t, err)
+	newKey, err := rsa.GenerateKey(rand.Reader, 2048)
+	require.NoError(t, err)
+	jwks, server := newTestJWKS(t)
+	jwks.setRSA("shared-kid", &oldKey.PublicKey)
+
+	runtimeConfig := &config.Config{Ecosystem: ecosystemVerifierConfig(server.URL)}
+	verifier := ProvideEcosystemTokenVerifier(runtimeConfig)
+	verifier.client = server.Client()
+	oldToken := signEcosystemToken(t, oldKey, "shared-kid", nil)
+	_, err = verifier.Verify(context.Background(), oldToken, "ecosystem:me")
+	require.NoError(t, err)
+	require.Equal(t, int64(1), jwks.calls.Load())
+
+	updated := ecosystemVerifierConfig(server.URL)
+	updated.IssuerURL = "https://issuer.example/updated"
+	updated.AllowedClientIDs = []string{"updated-bff"}
+	runtimeConfig.SetEcosystemSettings(updated)
+	jwks.setRSA("shared-kid", &newKey.PublicKey)
+	newToken := signEcosystemToken(t, newKey, "shared-kid", func(claims jwt.MapClaims) {
+		claims["iss"] = updated.IssuerURL
+		claims["client_id"] = "updated-bff"
+	})
+
+	identity, err := verifier.Verify(context.Background(), newToken, "ecosystem:me")
+	require.NoError(t, err)
+	require.Equal(t, updated.IssuerURL, identity.Issuer)
+	require.Equal(t, "updated-bff", identity.ClientID)
+	require.Equal(t, int64(2), jwks.calls.Load())
+
+	_, err = verifier.Verify(context.Background(), oldToken, "ecosystem:me")
+	require.ErrorIs(t, err, ErrInvalidLogtoToken)
+}

@@ -18,6 +18,44 @@ import (
 	"github.com/Wei-Shaw/sub2api/internal/pkg/xai"
 )
 
+func parseBoolSetting(values map[string]string, key string, fallback bool) bool {
+	if raw, ok := values[key]; ok {
+		return strings.EqualFold(strings.TrimSpace(raw), "true")
+	}
+	return fallback
+}
+func settingStringOr(values map[string]string, key, fallback string) string {
+	if raw, ok := values[key]; ok && strings.TrimSpace(raw) != "" {
+		return strings.TrimSpace(raw)
+	}
+	return strings.TrimSpace(fallback)
+}
+func parseIntSetting(values map[string]string, key string, fallback, defaultValue int) int {
+	if raw, ok := values[key]; ok {
+		if n, err := strconv.Atoi(strings.TrimSpace(raw)); err == nil && n != 0 {
+			return n
+		}
+	}
+	if fallback != 0 {
+		return fallback
+	}
+	return defaultValue
+}
+
+func defaultInt(value, fallback int) int {
+	if value != 0 {
+		return value
+	}
+	return fallback
+}
+
+func defaultInt64(value, fallback int64) int64 {
+	if value != 0 {
+		return value
+	}
+	return fallback
+}
+
 // InitializeDefaultSettings 初始化默认设置
 func (s *SettingService) InitializeDefaultSettings(ctx context.Context) error {
 	// 检查是否已有设置
@@ -51,6 +89,10 @@ func (s *SettingService) InitializeDefaultSettings(ctx context.Context) error {
 	forwardedClientIPHeadersJSON, err := json.Marshal(forwardedClientIPHeaders)
 	if err != nil {
 		return fmt.Errorf("marshal default forwarded client IP headers: %w", err)
+	}
+	ecosystemBase := config.EcosystemConfig{}
+	if s != nil && s.cfg != nil {
+		ecosystemBase = s.cfg.EcosystemSettings()
 	}
 
 	// 初始化默认设置
@@ -123,6 +165,19 @@ func (s *SettingService) InitializeDefaultSettings(ctx context.Context) error {
 		SettingKeyOIDCConnectUserInfoEmailPath:              "",
 		SettingKeyOIDCConnectUserInfoIDPath:                 "",
 		SettingKeyOIDCConnectUserInfoUsernamePath:           "",
+		SettingKeyEcosystemEnabled:                          strconv.FormatBool(ecosystemBase.Enabled),
+		SettingKeyEcosystemIssuerURL:                        ecosystemBase.IssuerURL,
+		SettingKeyEcosystemAudience:                         ecosystemBase.Audience,
+		SettingKeyEcosystemJWKSURL:                          ecosystemBase.JWKSURL,
+		SettingKeyEcosystemAllowedClientIDs:                 strings.Join(ecosystemBase.AllowedClientIDs, ","),
+		SettingKeyEcosystemPublicGatewayURL:                 ecosystemBase.PublicGatewayURL,
+		SettingKeyEcosystemAllowedSigningAlgs:               strings.Join(ecosystemBase.AllowedSigningAlgs, ","),
+		SettingKeyEcosystemClockSkewSeconds:                 strconv.Itoa(defaultInt(ecosystemBase.ClockSkewSeconds, 120)),
+		SettingKeyEcosystemJWKSRequestTimeoutSeconds:        strconv.Itoa(defaultInt(ecosystemBase.JWKSRequestTimeoutSeconds, 10)),
+		SettingKeyEcosystemJWKSMaxResponseBytes:             strconv.FormatInt(defaultInt64(ecosystemBase.JWKSMaxResponseBytes, 1048576), 10),
+		SettingKeyEcosystemJWKSCacheTTLSeconds:              strconv.Itoa(defaultInt(ecosystemBase.JWKSCacheTTLSeconds, 300)),
+		SettingKeyEcosystemJWKSRefreshMinIntervalSeconds:    strconv.Itoa(defaultInt(ecosystemBase.JWKSRefreshMinIntervalSeconds, 60)),
+		SettingKeyEcosystemRateLimitPerMinute:               strconv.Itoa(defaultInt(ecosystemBase.RateLimitPerMinute, 120)),
 		SettingKeyDefaultConcurrency:                        strconv.Itoa(s.cfg.Default.UserConcurrency),
 		SettingKeyDefaultBalance:                            strconv.FormatFloat(s.cfg.Default.UserBalance, 'f', 8, 64),
 		SettingKeyAffiliateRebateRate:                       strconv.FormatFloat(AffiliateRebateRateDefault, 'f', 8, 64),
@@ -722,6 +777,25 @@ func (s *SettingService) parseSettings(settings map[string]string) *SystemSettin
 		result.OIDCConnectClientSecret = strings.TrimSpace(oidcBase.ClientSecret)
 	}
 	result.OIDCConnectClientSecretConfigured = result.OIDCConnectClientSecret != ""
+
+	// Logto ecosystem resource adapter settings.
+	eco := config.EcosystemConfig{}
+	if s.cfg != nil {
+		eco = s.cfg.EcosystemSettings()
+	}
+	result.EcosystemEnabled = parseBoolSetting(settings, SettingKeyEcosystemEnabled, eco.Enabled)
+	result.EcosystemIssuerURL = settingStringOr(settings, SettingKeyEcosystemIssuerURL, eco.IssuerURL)
+	result.EcosystemAudience = settingStringOr(settings, SettingKeyEcosystemAudience, eco.Audience)
+	result.EcosystemJWKSURL = settingStringOr(settings, SettingKeyEcosystemJWKSURL, eco.JWKSURL)
+	result.EcosystemAllowedClientIDs = settingStringOr(settings, SettingKeyEcosystemAllowedClientIDs, strings.Join(eco.AllowedClientIDs, ","))
+	result.EcosystemPublicGatewayURL = settingStringOr(settings, SettingKeyEcosystemPublicGatewayURL, eco.PublicGatewayURL)
+	result.EcosystemAllowedSigningAlgs = settingStringOr(settings, SettingKeyEcosystemAllowedSigningAlgs, strings.Join(eco.AllowedSigningAlgs, ","))
+	result.EcosystemClockSkewSeconds = parseIntSetting(settings, SettingKeyEcosystemClockSkewSeconds, eco.ClockSkewSeconds, 120)
+	result.EcosystemJWKSRequestTimeoutSeconds = parseIntSetting(settings, SettingKeyEcosystemJWKSRequestTimeoutSeconds, eco.JWKSRequestTimeoutSeconds, 10)
+	result.EcosystemJWKSMaxResponseBytes = int64(parseIntSetting(settings, SettingKeyEcosystemJWKSMaxResponseBytes, int(eco.JWKSMaxResponseBytes), 1048576))
+	result.EcosystemJWKSCacheTTLSeconds = parseIntSetting(settings, SettingKeyEcosystemJWKSCacheTTLSeconds, eco.JWKSCacheTTLSeconds, 300)
+	result.EcosystemJWKSRefreshMinIntervalSeconds = parseIntSetting(settings, SettingKeyEcosystemJWKSRefreshMinIntervalSeconds, eco.JWKSRefreshMinIntervalSeconds, 60)
+	result.EcosystemRateLimitPerMinute = parseIntSetting(settings, SettingKeyEcosystemRateLimitPerMinute, eco.RateLimitPerMinute, 120)
 
 	gitHubEffective := s.effectiveEmailOAuthConfig(settings, "github")
 	result.GitHubOAuthEnabled = gitHubEffective.Enabled

@@ -129,8 +129,10 @@ func bearerToken(header string) (string, bool) {
 
 func (h *EcosystemHandler) allow(userID int64, clientID string) bool {
 	limit := 60
-	if h.cfg != nil && h.cfg.Ecosystem.RateLimitPerMinute > 0 {
-		limit = h.cfg.Ecosystem.RateLimitPerMinute
+	if h.cfg != nil {
+		if configured := h.cfg.EcosystemSettings().RateLimitPerMinute; configured > 0 {
+			limit = configured
+		}
 	}
 	now := time.Now()
 	key := strconv.FormatInt(userID, 10) + ":" + clientID

@@ -189,10 +189,7 @@ func (s *EcosystemService) Models(ctx context.Context, userID int64, groupID *in
 			return nil, ErrEcosystemGroupNotFound
 		}
 	}
-	baseURL := ""
-	if s.cfg != nil {
-		baseURL = strings.TrimRight(s.cfg.Ecosystem.PublicGatewayURL, "/")
-	}
+	baseURL := strings.TrimRight(s.ecosystemConfig().PublicGatewayURL, "/")
 	result := make([]EcosystemModel, 0)
 	for i := range groups {
 		group := &groups[i]
@@ -271,8 +268,15 @@ func (s *EcosystemService) availableGroups(ctx context.Context, userID int64) ([
 }
 
 func (s *EcosystemService) ValidateEnabled() error {
-	if s == nil || s.cfg == nil || !s.cfg.Ecosystem.Enabled {
+	if s == nil || !s.ecosystemConfig().Enabled {
 		return ErrEcosystemDisabled
 	}
 	return nil
+}
+
+func (s *EcosystemService) ecosystemConfig() config.EcosystemConfig {
+	if s == nil || s.cfg == nil {
+		return config.EcosystemConfig{}
+	}
+	return s.cfg.EcosystemSettings()
 }
