@@ -2219,12 +2219,12 @@ func setDefaults() {
 	viper.SetDefault("ecosystem.allowed_client_ids", []string{})
 	viper.SetDefault("ecosystem.public_gateway_url", "")
 	viper.SetDefault("ecosystem.allowed_signing_algs", []string{"RS256", "ES256", "PS256"})
-	viper.SetDefault("ecosystem.clock_skew_seconds", 60)
-	viper.SetDefault("ecosystem.jwks_request_timeout_seconds", 5)
+	viper.SetDefault("ecosystem.clock_skew_seconds", 120)
+	viper.SetDefault("ecosystem.jwks_request_timeout_seconds", 10)
 	viper.SetDefault("ecosystem.jwks_max_response_bytes", 1048576)
 	viper.SetDefault("ecosystem.jwks_cache_ttl_seconds", 300)
-	viper.SetDefault("ecosystem.jwks_refresh_min_interval_seconds", 30)
-	viper.SetDefault("ecosystem.rate_limit_per_minute", 60)
+	viper.SetDefault("ecosystem.jwks_refresh_min_interval_seconds", 60)
+	viper.SetDefault("ecosystem.rate_limit_per_minute", 120)
 
 	// DingTalk Connect OAuth 登录
 	viper.SetDefault("dingtalk_connect.enabled", false)

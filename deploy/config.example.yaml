@@ -1009,13 +1009,13 @@ ecosystem:
   jwks_url: "https://your-logto.example.com/oidc/jwks"
   allowed_client_ids: ["trusted-bff"]
   public_gateway_url: "https://gateway.example.com"
-  allowed_signing_algs: ["RS256"]
-  clock_skew_seconds: 30
-  jwks_request_timeout_seconds: 5
+  allowed_signing_algs: ["RS256", "ES256", "PS256"]
+  clock_skew_seconds: 120
+  jwks_request_timeout_seconds: 10
   jwks_max_response_bytes: 1048576
   jwks_cache_ttl_seconds: 300
-  jwks_refresh_min_interval_seconds: 30
-  rate_limit_per_minute: 60
+  jwks_refresh_min_interval_seconds: 60
+  rate_limit_per_minute: 120
 
 # =============================================================================
 # Default Settings
