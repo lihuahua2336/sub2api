@@ -2,9 +2,10 @@ import { flushPromises, mount } from '@vue/test-utils'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import LoginView from '@/views/auth/LoginView.vue'
 
-const { getPublicSettingsMock, pushMock } = vi.hoisted(() => ({
+const { getPublicSettingsMock, pushMock, routePath } = vi.hoisted(() => ({
   getPublicSettingsMock: vi.fn(),
-  pushMock: vi.fn()
+  pushMock: vi.fn(),
+  routePath: { value: '/login' }
 }))
 
 const publicSettings = {
@@ -31,6 +32,7 @@ const publicSettings = {
 }
 
 vi.mock('vue-router', () => ({
+  useRoute: () => ({ get path() { return routePath.value } }),
   useRouter: () => ({
     push: pushMock,
     currentRoute: { value: { query: {} } }
@@ -79,7 +81,7 @@ function mountLogin() {
         Icon: true,
         LinuxDoOAuthSection: true,
         LoginAgreementPrompt: true,
-        OidcOAuthSection: true,
+        OidcOAuthSection: { template: '<button>oidc-login</button>' },
         RouterLink: { template: '<a><slot /></a>' },
         TotpLoginModal: true,
         TurnstileWidget: true,
@@ -94,6 +96,8 @@ describe('LoginView registration entry', () => {
   beforeEach(() => {
     getPublicSettingsMock.mockReset()
     pushMock.mockReset()
+    routePath.value = '/login'
+    vi.stubEnv('VITE_OIDC_ONLY', '')
     getPublicSettingsMock.mockResolvedValue(publicSettings)
   })
 
@@ -114,5 +118,46 @@ describe('LoginView registration entry', () => {
     await flushPromises()
 
     expect(wrapper.text()).not.toContain('auth.signUp')
+  })
+
+  it('shows only OIDC login and hides registration in OIDC-only mode', async () => {
+    vi.stubEnv('VITE_OIDC_ONLY', 'true')
+    getPublicSettingsMock.mockResolvedValue({
+      ...publicSettings,
+      registration_enabled: true,
+      oidc_oauth_enabled: true,
+      github_oauth_enabled: true,
+      google_oauth_enabled: true,
+      linuxdo_oauth_enabled: true,
+      dingtalk_oauth_enabled: true,
+      wechat_oauth_enabled: true,
+      passkey_enabled: true
+    })
+
+    const wrapper = mountLogin()
+    await flushPromises()
+
+    expect(wrapper.find('#password').exists()).toBe(false)
+    expect(wrapper.text()).toContain('oidc-login')
+    expect(wrapper.text()).not.toContain('auth.signUp')
+    expect(wrapper.findComponent({ name: 'EmailOAuthButtons' }).exists()).toBe(false)
+    expect(wrapper.findComponent({ name: 'LinuxDoOAuthSection' }).exists()).toBe(false)
+    expect(wrapper.findComponent({ name: 'DingTalkOAuthSection' }).exists()).toBe(false)
+    expect(wrapper.findComponent({ name: 'WechatOAuthSection' }).exists()).toBe(false)
+  })
+
+  it('keeps the password form on the dedicated admin login path', async () => {
+    vi.stubEnv('VITE_OIDC_ONLY', 'true')
+    routePath.value = '/admin/login'
+    getPublicSettingsMock.mockResolvedValue({
+      ...publicSettings,
+      oidc_oauth_enabled: true
+    })
+
+    const wrapper = mountLogin()
+    await flushPromises()
+
+    expect(wrapper.find('#password').exists()).toBe(true)
+    expect(wrapper.text()).not.toContain('oidc-login')
   })
 })

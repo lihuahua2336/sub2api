@@ -1,6 +1,7 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { setActivePinia, createPinia } from 'pinia'
 import { resolveCompletedSetupRedirectPath } from '@/router/setupRedirect'
+import { getOidcOnlyRedirect } from '@/utils/oidcOnly'
 
 // Mock 导航加载状态
 vi.mock('@/composables/useNavigationLoading', () => {
@@ -528,5 +529,27 @@ describe('路由守卫逻辑', () => {
       const redirect = simulateGuard('/email-verify', { requiresAuth: false }, authState)
       expect(redirect).toBe('/login')
     })
+  })
+})
+
+describe('OIDC-only auth routes', () => {
+  beforeEach(() => {
+    vi.stubEnv('VITE_OIDC_ONLY', 'true')
+  })
+
+  it.each(['/register', '/forgot-password', '/reset-password'])('%s redirects to /login', (path) => {
+    expect(getOidcOnlyRedirect(path)).toBe('/login')
+  })
+
+  it.each(['/auth/oidc/callback', '/auth/oauth/oidc/complete-registration', '/email-verify'])(
+    '%s remains available',
+    (path) => {
+      expect(getOidcOnlyRedirect(path)).toBeNull()
+    }
+  )
+
+  it('does not redirect auth pages when the build flag is disabled', () => {
+    vi.stubEnv('VITE_OIDC_ONLY', '')
+    expect(getOidcOnlyRedirect('/register')).toBeNull()
   })
 })

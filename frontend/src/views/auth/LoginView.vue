@@ -11,7 +11,7 @@
         </p>
       </div>
       <!-- Login Form -->
-      <form @submit.prevent="handleLogin" class="space-y-5">
+      <form v-if="!oidcOnlyLogin || isAdminLogin" @submit.prevent="handleLogin" class="space-y-5">
         <!-- Email Input -->
         <div>
           <label for="email" class="input-label">
@@ -127,20 +127,22 @@
           {{ isLoading ? t('auth.signingIn') : t('auth.signIn') }}
         </button>
 
-        <LoginAgreementPrompt
-          v-if="loginAgreementEnabled"
-          :accepted="agreementAccepted"
-          :documents="loginAgreementDocuments"
-          :mode="loginAgreementMode"
-          :updated-at="loginAgreementUpdatedAt"
-          :visible="showAgreementModal"
-          @accept="acceptLoginAgreement"
-          @reject="rejectLoginAgreement"
-          @open="showAgreementModal = true"
-        />
+      </form>
 
-        <div v-if="showPasskeyLogin || showOAuthLogin" class="space-y-3 pt-1">
-          <div class="flex items-center gap-3">
+      <LoginAgreementPrompt
+        v-if="loginAgreementEnabled"
+        :accepted="agreementAccepted"
+        :documents="loginAgreementDocuments"
+        :mode="loginAgreementMode"
+        :updated-at="loginAgreementUpdatedAt"
+        :visible="showAgreementModal"
+        @accept="acceptLoginAgreement"
+        @reject="rejectLoginAgreement"
+        @open="showAgreementModal = true"
+      />
+
+      <div v-if="showPasskeyLogin || showOAuthLogin || (oidcOnlyLogin && publicSettingsLoaded)" class="space-y-3 pt-1">
+          <div v-if="!oidcOnlyLogin" class="flex items-center gap-3">
             <div class="h-px flex-1 bg-gray-200 dark:bg-dark-700"></div>
             <span class="text-xs text-gray-500 dark:text-dark-400">
               {{ t('auth.oauthOrContinue') }}
@@ -149,7 +151,7 @@
           </div>
 
           <button
-            v-if="showPasskeyLogin"
+            v-if="showPasskeyLogin && !oidcOnlyLogin"
             type="button"
             class="btn btn-secondary w-full"
             :disabled="authActionDisabled"
@@ -160,27 +162,28 @@
           </button>
 
           <EmailOAuthButtons
+            v-if="!oidcOnlyLogin && (githubOAuthEnabled || googleOAuthEnabled)"
             :disabled="authActionDisabled"
-            :github-enabled="githubOAuthEnabled"
-            :google-enabled="googleOAuthEnabled"
+            :github-enabled="!oidcOnlyLogin && githubOAuthEnabled"
+            :google-enabled="!oidcOnlyLogin && googleOAuthEnabled"
             :show-divider="false"
             @start="handleOAuthStart"
           />
 
           <LinuxDoOAuthSection
-            v-if="linuxdoOAuthEnabled"
+            v-if="!oidcOnlyLogin && linuxdoOAuthEnabled"
             :disabled="authActionDisabled"
             :show-divider="false"
             @start="handleOAuthStart"
           />
           <DingTalkOAuthSection
-            v-if="dingtalkOAuthEnabled"
+            v-if="!oidcOnlyLogin && dingtalkOAuthEnabled"
             :disabled="authActionDisabled"
             :show-divider="false"
             @start="handleOAuthStart"
           />
           <WechatOAuthSection
-            v-if="wechatOAuthEnabled"
+            v-if="!oidcOnlyLogin && wechatOAuthEnabled"
             :disabled="authActionDisabled"
             :show-divider="false"
             @start="handleOAuthStart"
@@ -192,12 +195,20 @@
             :show-divider="false"
             @start="handleOAuthStart"
           />
-        </div>
-      </form>
+          <p
+            v-else-if="oidcOnlyLogin && publicSettingsLoaded"
+            class="text-center text-sm text-gray-500 dark:text-dark-400"
+          >
+            {{ t('auth.oidcOnlyUnavailable') }}
+          </p>
+      </div>
     </div>
 
     <!-- Footer -->
-    <template v-if="!backendModeEnabled && publicSettingsLoaded && registrationEnabled" #footer>
+    <template
+      v-if="!oidcOnlyLogin && !isAdminLogin && !backendModeEnabled && publicSettingsLoaded && registrationEnabled"
+      #footer
+    >
       <p class="text-gray-500 dark:text-dark-400">
         {{ t('auth.dontHaveAccount') }}
         <router-link
@@ -223,7 +234,7 @@
 
 <script setup lang="ts">
 import { computed, ref, reactive, onMounted, watch } from 'vue'
-import { useRouter } from 'vue-router'
+import { useRoute, useRouter } from 'vue-router'
 import { useI18n } from 'vue-i18n'
 import { AuthLayout } from '@/components/layout'
 import LinuxDoOAuthSection from '@/components/auth/LinuxDoOAuthSection.vue'
@@ -251,6 +262,7 @@ import type {
 } from '@/types'
 import { extractI18nErrorMessage } from '@/utils/apiError'
 import { clearAllAffiliateReferralCodes } from '@/utils/oauthAffiliate'
+import { isOidcOnlyEnabled } from '@/utils/oidcOnly'
 
 const { t } = useI18n()
 const LOGIN_AGREEMENT_STORAGE_KEY = 'sub2api_login_agreement_consent'
@@ -258,6 +270,7 @@ const LOGIN_AGREEMENT_STORAGE_KEY = 'sub2api_login_agreement_consent'
 // ==================== Router & Stores ====================
 
 const router = useRouter()
+const route = useRoute()
 const authStore = useAuthStore()
 const appStore = useAppStore()
 
@@ -268,6 +281,8 @@ const passkeyLoading = ref<boolean>(false)
 const errorMessage = ref<string>('')
 const showPassword = ref<boolean>(false)
 const publicSettingsLoaded = ref<boolean>(false)
+const isAdminLogin = computed(() => route.path === '/admin/login')
+const oidcOnlyLogin = computed(() => isOidcOnlyEnabled() && !isAdminLogin.value)
 
 // Public settings
 const registrationEnabled = ref<boolean>(false)
@@ -349,18 +364,24 @@ const authActionDisabled = computed(
 )
 
 const showPasskeyLogin = computed(
-  () => passkeyEnabled.value && typeof window.PublicKeyCredential !== 'undefined'
+  () =>
+    !isAdminLogin.value &&
+    passkeyEnabled.value &&
+    typeof window.PublicKeyCredential !== 'undefined'
 )
 
 const showOAuthLogin = computed(
   () =>
-    !backendModeEnabled.value &&
-    (linuxdoOAuthEnabled.value ||
-      dingtalkOAuthEnabled.value ||
-      wechatOAuthEnabled.value ||
-      oidcOAuthEnabled.value ||
-      githubOAuthEnabled.value ||
-      googleOAuthEnabled.value)
+    oidcOnlyLogin.value
+      ? oidcOAuthEnabled.value
+      : !isAdminLogin.value &&
+        !backendModeEnabled.value &&
+        (linuxdoOAuthEnabled.value ||
+          dingtalkOAuthEnabled.value ||
+          wechatOAuthEnabled.value ||
+          oidcOAuthEnabled.value ||
+          githubOAuthEnabled.value ||
+          googleOAuthEnabled.value)
 )
 
 watch(validationToastMessage, (value, previousValue) => {
