@@ -1,5 +1,7 @@
 # Logto 生态 access token 契约研究
 
+实际部署步骤、Logto 控制台配置、业务应用接入示例和排障流程见 [Logto 生态适配层配置与应用接入指南](LOGTO_ECOSYSTEM_INTEGRATION_CN.md)。
+
 状态：Issue #1 实现前置研究。本文固定可复核的上游版本，并区分标准要求、Logto 源码事实和本项目的受信部署约定。
 
 ## 版本与本仓库边界
