@@ -815,7 +815,11 @@ router.beforeEach(async (to, _from, next) => {
   const requiresAuth = to.meta.requiresAuth !== false // Default to true
   const requiresAdmin = to.meta.requiresAdmin === true
 
-  const oidcOnlyRedirect = getOidcOnlyRedirect(to.path)
+  const oidcOnlyRedirect = getOidcOnlyRedirect(to.path) ||
+    (appStore.cachedPublicSettings?.oidc_only_login === true &&
+    ['/register', '/forgot-password', '/reset-password'].some((path) => to.path === path || to.path.startsWith(`${path}/`))
+      ? '/login'
+      : null)
   if (oidcOnlyRedirect) {
     next(oidcOnlyRedirect)
     return

@@ -282,7 +282,7 @@ const errorMessage = ref<string>('')
 const showPassword = ref<boolean>(false)
 const publicSettingsLoaded = ref<boolean>(false)
 const isAdminLogin = computed(() => route.path === '/admin/login')
-const oidcOnlyLogin = computed(() => isOidcOnlyEnabled() && !isAdminLogin.value)
+const oidcOnlyLogin = computed(() => (isOidcOnlyEnabled() || appStore.cachedPublicSettings?.oidc_only_login === true) && !isAdminLogin.value)
 
 // Public settings
 const registrationEnabled = ref<boolean>(false)
