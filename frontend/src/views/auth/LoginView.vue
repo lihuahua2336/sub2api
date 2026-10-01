@@ -251,6 +251,7 @@ import type {
 } from '@/types'
 import { extractI18nErrorMessage } from '@/utils/apiError'
 import { clearAllAffiliateReferralCodes } from '@/utils/oauthAffiliate'
+import { isOidcOnlyEnabled } from '@/utils/oidcOnly'
 
 const { t } = useI18n()
 const LOGIN_AGREEMENT_STORAGE_KEY = 'sub2api_login_agreement_consent'
@@ -258,6 +259,7 @@ const LOGIN_AGREEMENT_STORAGE_KEY = 'sub2api_login_agreement_consent'
 // ==================== Router & Stores ====================
 
 const router = useRouter()
+const route = useRoute()
 const authStore = useAuthStore()
 const appStore = useAppStore()
 
@@ -268,6 +270,8 @@ const passkeyLoading = ref<boolean>(false)
 const errorMessage = ref<string>('')
 const showPassword = ref<boolean>(false)
 const publicSettingsLoaded = ref<boolean>(false)
+const isAdminLogin = computed(() => route.path === '/admin/login')
+const oidcOnlyLogin = computed(() => (isOidcOnlyEnabled() || appStore.cachedPublicSettings?.oidc_only_login === true) && !isAdminLogin.value)
 
 // Public settings
 const registrationEnabled = ref<boolean>(false)

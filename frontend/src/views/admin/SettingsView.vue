@@ -1411,6 +1411,14 @@
                 <Toggle v-model="form.registration_enabled" />
               </div>
 
+              <div class="flex items-center justify-between border-t border-gray-100 pt-4 dark:border-dark-700">
+                <div>
+                  <label class="font-medium text-gray-900 dark:text-white">{{ localText("仅允许 EggAi OIDC 登录", "OIDC-only user login") }}</label>
+                  <p class="text-sm text-gray-500 dark:text-gray-400">{{ localText("普通用户隐藏邮箱密码登录和注册入口，管理员登录不受影响。", "Hide email/password login and registration for regular users; admin login remains available.") }}</p>
+                </div>
+                <Toggle v-model="form.oidc_only_login" />
+              </div>
+
               <!-- Email Verification -->
               <div
                 class="flex items-center justify-between border-t border-gray-100 pt-4 dark:border-dark-700"
@@ -9736,6 +9744,7 @@ function platformQuotaRows(map: DefaultPlatformQuotasMap | undefined): string[] 
 
 const form = reactive<SettingsForm>({
   registration_enabled: true,
+  oidc_only_login: false,
   email_verify_enabled: false,
   registration_email_suffix_whitelist: [],
   registration_email_domain_quota_enabled: false,
@@ -11438,6 +11447,7 @@ async function saveSettings() {
 
     const payload: UpdateSettingsRequest = {
       registration_enabled: form.registration_enabled,
+      oidc_only_login: form.oidc_only_login,
       email_verify_enabled: form.email_verify_enabled,
       registration_email_suffix_whitelist:
         registrationEmailSuffixWhitelistTags.value.map((suffix) =>

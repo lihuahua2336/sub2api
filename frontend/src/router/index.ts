@@ -13,6 +13,7 @@ import { useRoutePrefetch } from '@/composables/useRoutePrefetch'
 import { getSetupStatus } from '@/api/setup'
 import { resolveCompletedSetupRedirectPath } from './setupRedirect'
 import { resolveRouteDocumentTitle } from './title'
+import { getOidcOnlyRedirect } from '@/utils/oidcOnly'
 
 /**
  * Route definitions with lazy loading
@@ -804,6 +805,15 @@ router.beforeEach(async (to, _from, next) => {
   const requiresAuth = to.meta.requiresAuth !== false // Default to true
   const requiresAdmin = to.meta.requiresAdmin === true
 
+  const oidcOnlyRedirect = getOidcOnlyRedirect(to.path) ||
+    (appStore.cachedPublicSettings?.oidc_only_login === true &&
+    ['/register', '/forgot-password', '/reset-password'].some((path) => to.path === path || to.path.startsWith(`${path}/`))
+      ? '/login'
+      : null)
+  if (oidcOnlyRedirect) {
+    next(oidcOnlyRedirect)
+    return
+  }
   if (to.path === '/setup') {
     try {
       const status = await getSetupStatus()
