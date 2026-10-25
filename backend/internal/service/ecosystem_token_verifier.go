@@ -258,7 +258,7 @@ func (v *EcosystemTokenVerifier) fetchKeys(parent context.Context, cfg config.Ec
 	if err != nil {
 		return fmt.Errorf("%w: fetch keys", errEcosystemJWKSUnavailable)
 	}
-	defer resp.Body.Close()
+	defer func() { _ = resp.Body.Close() }()
 	if resp.StatusCode < 200 || resp.StatusCode >= 300 {
 		return fmt.Errorf("%w: unexpected status", errEcosystemJWKSUnavailable)
 	}
@@ -346,11 +346,15 @@ func parseEcosystemJWK(jwk ecosystemJWK) (any, error) {
 		if err != nil {
 			return nil, err
 		}
-		x, y := new(big.Int).SetBytes(xBytes), new(big.Int).SetBytes(yBytes)
-		if !curve.IsOnCurve(x, y) {
+		point := make([]byte, 1+len(xBytes)+len(yBytes))
+		point[0] = 4
+		copy(point[1:], xBytes)
+		copy(point[1+len(xBytes):], yBytes)
+		key, err := ecdsa.ParseUncompressedPublicKey(curve, point)
+		if err != nil {
 			return nil, errors.New("invalid EC point")
 		}
-		return &ecdsa.PublicKey{Curve: curve, X: x, Y: y}, nil
+		return key, nil
 	default:
 		return nil, errors.New("unsupported key type")
 	}

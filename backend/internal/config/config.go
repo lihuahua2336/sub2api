@@ -66,48 +66,48 @@ const DefaultUpstreamResponseReadMaxBytes int64 = 128 * 1024 * 1024
 const DefaultModelsListReadMaxBytes int64 = 8 * 1024 * 1024
 
 type Config struct {
-	Server                  ServerConfig                  `mapstructure:"server"`
-	Log                     LogConfig                     `mapstructure:"log"`
-	CORS                    CORSConfig                    `mapstructure:"cors"`
-	Security                SecurityConfig                `mapstructure:"security"`
-	Billing                 BillingConfig                 `mapstructure:"billing"`
-	Turnstile               TurnstileConfig               `mapstructure:"turnstile"`
-	Database                DatabaseConfig                `mapstructure:"database"`
-	Redis                   RedisConfig                   `mapstructure:"redis"`
-	Ops                     OpsConfig                     `mapstructure:"ops"`
-	JWT                     JWTConfig                     `mapstructure:"jwt"`
-	Totp                    TotpConfig                    `mapstructure:"totp"`
-	WebAuthn                WebAuthnConfig                `mapstructure:"webauthn"`
-	LinuxDo                 LinuxDoConnectConfig          `mapstructure:"linuxdo_connect"`
-	WeChat                  WeChatConnectConfig           `mapstructure:"wechat_connect"`
-	OIDC                    OIDCConnectConfig             `mapstructure:"oidc_connect"`
-	Ecosystem               EcosystemConfig               `mapstructure:"ecosystem"`
+	Server                  ServerConfig                     `mapstructure:"server"`
+	Log                     LogConfig                        `mapstructure:"log"`
+	CORS                    CORSConfig                       `mapstructure:"cors"`
+	Security                SecurityConfig                   `mapstructure:"security"`
+	Billing                 BillingConfig                    `mapstructure:"billing"`
+	Turnstile               TurnstileConfig                  `mapstructure:"turnstile"`
+	Database                DatabaseConfig                   `mapstructure:"database"`
+	Redis                   RedisConfig                      `mapstructure:"redis"`
+	Ops                     OpsConfig                        `mapstructure:"ops"`
+	JWT                     JWTConfig                        `mapstructure:"jwt"`
+	Totp                    TotpConfig                       `mapstructure:"totp"`
+	WebAuthn                WebAuthnConfig                   `mapstructure:"webauthn"`
+	LinuxDo                 LinuxDoConnectConfig             `mapstructure:"linuxdo_connect"`
+	WeChat                  WeChatConnectConfig              `mapstructure:"wechat_connect"`
+	OIDC                    OIDCConnectConfig                `mapstructure:"oidc_connect"`
+	Ecosystem               EcosystemConfig                  `mapstructure:"ecosystem"`
 	ecosystemLive           *atomic.Pointer[EcosystemConfig] `mapstructure:"-" yaml:"-"`
-	DingTalk                DingTalkConnectConfig         `mapstructure:"dingtalk_connect"`
-	GitHubOAuth             EmailOAuthProviderConfig      `mapstructure:"github_oauth"`
-	GoogleOAuth             EmailOAuthProviderConfig      `mapstructure:"google_oauth"`
-	Default                 DefaultConfig                 `mapstructure:"default"`
-	RateLimit               RateLimitConfig               `mapstructure:"rate_limit"`
-	Pricing                 PricingConfig                 `mapstructure:"pricing"`
-	Gateway                 GatewayConfig                 `mapstructure:"gateway"`
-	APIKeyAuth              APIKeyAuthCacheConfig         `mapstructure:"api_key_auth_cache"`
-	APIKeyCreate            APIKeyCreateConfig            `mapstructure:"api_key_create"`
-	SubscriptionCache       SubscriptionCacheConfig       `mapstructure:"subscription_cache"`
-	SubscriptionMaintenance SubscriptionMaintenanceConfig `mapstructure:"subscription_maintenance"`
-	Dashboard               DashboardCacheConfig          `mapstructure:"dashboard_cache"`
-	DashboardAgg            DashboardAggregationConfig    `mapstructure:"dashboard_aggregation"`
-	UsageCleanup            UsageCleanupConfig            `mapstructure:"usage_cleanup"`
-	Concurrency             ConcurrencyConfig             `mapstructure:"concurrency"`
-	TokenRefresh            TokenRefreshConfig            `mapstructure:"token_refresh"`
-	SimpleMode              SimpleModeConfig              `mapstructure:"simple_mode" yaml:"simple_mode"`
-	RunMode                 string                        `mapstructure:"run_mode" yaml:"run_mode"`
-	Timezone                string                        `mapstructure:"timezone"` // e.g. "Asia/Shanghai", "UTC"
-	Gemini                  GeminiConfig                  `mapstructure:"gemini"`
-	Update                  UpdateConfig                  `mapstructure:"update"`
-	Idempotency             IdempotencyConfig             `mapstructure:"idempotency"`
-	BatchImage              BatchImageConfig              `mapstructure:"batch_image"`
-	ImageStorage            ImageStorageConfig            `mapstructure:"image_storage"`
-	Plugins                 PluginConfig                  `mapstructure:"plugins"`
+	DingTalk                DingTalkConnectConfig            `mapstructure:"dingtalk_connect"`
+	GitHubOAuth             EmailOAuthProviderConfig         `mapstructure:"github_oauth"`
+	GoogleOAuth             EmailOAuthProviderConfig         `mapstructure:"google_oauth"`
+	Default                 DefaultConfig                    `mapstructure:"default"`
+	RateLimit               RateLimitConfig                  `mapstructure:"rate_limit"`
+	Pricing                 PricingConfig                    `mapstructure:"pricing"`
+	Gateway                 GatewayConfig                    `mapstructure:"gateway"`
+	APIKeyAuth              APIKeyAuthCacheConfig            `mapstructure:"api_key_auth_cache"`
+	APIKeyCreate            APIKeyCreateConfig               `mapstructure:"api_key_create"`
+	SubscriptionCache       SubscriptionCacheConfig          `mapstructure:"subscription_cache"`
+	SubscriptionMaintenance SubscriptionMaintenanceConfig    `mapstructure:"subscription_maintenance"`
+	Dashboard               DashboardCacheConfig             `mapstructure:"dashboard_cache"`
+	DashboardAgg            DashboardAggregationConfig       `mapstructure:"dashboard_aggregation"`
+	UsageCleanup            UsageCleanupConfig               `mapstructure:"usage_cleanup"`
+	Concurrency             ConcurrencyConfig                `mapstructure:"concurrency"`
+	TokenRefresh            TokenRefreshConfig               `mapstructure:"token_refresh"`
+	SimpleMode              SimpleModeConfig                 `mapstructure:"simple_mode" yaml:"simple_mode"`
+	RunMode                 string                           `mapstructure:"run_mode" yaml:"run_mode"`
+	Timezone                string                           `mapstructure:"timezone"` // e.g. "Asia/Shanghai", "UTC"
+	Gemini                  GeminiConfig                     `mapstructure:"gemini"`
+	Update                  UpdateConfig                     `mapstructure:"update"`
+	Idempotency             IdempotencyConfig                `mapstructure:"idempotency"`
+	BatchImage              BatchImageConfig                 `mapstructure:"batch_image"`
+	ImageStorage            ImageStorageConfig               `mapstructure:"image_storage"`
+	Plugins                 PluginConfig                     `mapstructure:"plugins"`
 
 	// Enforce only API-key spending windows in simple mode.
 	SimpleModeKeyRateLimitEnabled bool `mapstructure:"simple_mode_key_rate_limit_enabled" yaml:"simple_mode_key_rate_limit_enabled"`
@@ -1973,6 +1973,12 @@ func load(allowMissingJWTSecret bool) (*Config, error) {
 	cfg.OIDC.UserInfoEmailPath = strings.TrimSpace(cfg.OIDC.UserInfoEmailPath)
 	cfg.OIDC.UserInfoIDPath = strings.TrimSpace(cfg.OIDC.UserInfoIDPath)
 	cfg.OIDC.UserInfoUsernamePath = strings.TrimSpace(cfg.OIDC.UserInfoUsernamePath)
+	cfg.Ecosystem.IssuerURL = strings.TrimSpace(cfg.Ecosystem.IssuerURL)
+	cfg.Ecosystem.Audience = strings.TrimSpace(cfg.Ecosystem.Audience)
+	cfg.Ecosystem.JWKSURL = strings.TrimSpace(cfg.Ecosystem.JWKSURL)
+	cfg.Ecosystem.AllowedClientIDs = normalizeStringSlice(cfg.Ecosystem.AllowedClientIDs)
+	cfg.Ecosystem.PublicGatewayURL = strings.TrimSpace(cfg.Ecosystem.PublicGatewayURL)
+	cfg.Ecosystem.AllowedSigningAlgs = normalizeStringSlice(cfg.Ecosystem.AllowedSigningAlgs)
 	cfg.OIDC.UsePKCEExplicit = hasExplicitConfigOrEnv("oidc_connect.use_pkce", "OIDC_CONNECT_USE_PKCE")
 	cfg.OIDC.ValidateIDTokenExplicit = hasExplicitConfigOrEnv("oidc_connect.validate_id_token", "OIDC_CONNECT_VALIDATE_ID_TOKEN")
 	cfg.Dashboard.KeyPrefix = strings.TrimSpace(cfg.Dashboard.KeyPrefix)
@@ -2775,6 +2781,9 @@ func setEnvReachableDefaults() {
 }
 
 func (c *Config) Validate() error {
+	if err := validateEcosystemConfig(c.Ecosystem); err != nil {
+		return err
+	}
 	if c.Gateway.MinOutputTokens < 16 {
 		return fmt.Errorf("gateway.min_output_tokens must be at least 16")
 	}
@@ -3849,6 +3858,57 @@ func (c *Config) Validate() error {
 	}
 	if err := ValidateDingTalkConfig(c.DingTalk); err != nil {
 		return fmt.Errorf("dingtalk_connect: %w", err)
+	}
+	return nil
+}
+
+func validateEcosystemConfig(c EcosystemConfig) error {
+	if !c.Enabled {
+		return nil
+	}
+	for _, field := range []struct{ name, value string }{
+		{"issuer_url", c.IssuerURL},
+		{"audience", c.Audience},
+		{"jwks_url", c.JWKSURL},
+		{"public_gateway_url", c.PublicGatewayURL},
+	} {
+		if err := ValidateAbsoluteHTTPURL(field.value); err != nil {
+			return fmt.Errorf("ecosystem.%s: %w", field.name, err)
+		}
+	}
+	if len(normalizeStringSlice(c.AllowedClientIDs)) == 0 {
+		return fmt.Errorf("ecosystem.allowed_client_ids must not be empty")
+	}
+	allowedAlgs := map[string]struct{}{
+		"RS256": {}, "RS384": {}, "RS512": {},
+		"ES256": {}, "ES384": {}, "ES512": {},
+		"PS256": {}, "PS384": {}, "PS512": {},
+	}
+	if len(c.AllowedSigningAlgs) == 0 {
+		return fmt.Errorf("ecosystem.allowed_signing_algs must not be empty")
+	}
+	for _, alg := range c.AllowedSigningAlgs {
+		if _, ok := allowedAlgs[strings.TrimSpace(alg)]; !ok {
+			return fmt.Errorf("ecosystem.allowed_signing_algs contains unsupported algorithm %q", alg)
+		}
+	}
+	if c.ClockSkewSeconds < 0 || c.ClockSkewSeconds > 600 {
+		return fmt.Errorf("ecosystem.clock_skew_seconds must be between 0 and 600")
+	}
+	if c.JWKSRequestTimeoutSeconds < 1 || c.JWKSRequestTimeoutSeconds > 30 {
+		return fmt.Errorf("ecosystem.jwks_request_timeout_seconds must be between 1 and 30")
+	}
+	if c.JWKSMaxResponseBytes < 1024 || c.JWKSMaxResponseBytes > 16*1024*1024 {
+		return fmt.Errorf("ecosystem.jwks_max_response_bytes must be between 1024 and 16777216")
+	}
+	if c.JWKSCacheTTLSeconds < 1 || c.JWKSCacheTTLSeconds > 86400 {
+		return fmt.Errorf("ecosystem.jwks_cache_ttl_seconds must be between 1 and 86400")
+	}
+	if c.JWKSRefreshMinIntervalSeconds < 1 || c.JWKSRefreshMinIntervalSeconds > 3600 {
+		return fmt.Errorf("ecosystem.jwks_refresh_min_interval_seconds must be between 1 and 3600")
+	}
+	if c.RateLimitPerMinute < 1 || c.RateLimitPerMinute > 10000 {
+		return fmt.Errorf("ecosystem.rate_limit_per_minute must be between 1 and 10000")
 	}
 	return nil
 }
