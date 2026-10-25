@@ -46,6 +46,7 @@ func initializeApplication(buildInfo handler.BuildInfo) (*Application, error) {
 		return nil, err
 	}
 	userRepository := repository.NewUserRepository(client, db)
+	ecosystemRepository := repository.NewEcosystemRepository(client)
 	redeemCodeRepository := repository.NewRedeemCodeRepository(client)
 	redisClient := repository.ProvideRedis(configConfig)
 	refreshTokenCache := repository.NewRefreshTokenCache(redisClient)
@@ -301,6 +302,9 @@ func initializeApplication(buildInfo handler.BuildInfo) (*Application, error) {
 	geminiCachedContentService := service.ProvideGeminiCachedContentService(geminiCachedContentRepository, geminiMessagesCompatService, configConfig)
 	gatewayHandler := handler.ProvideGatewayHandler(gatewayService, openAIGatewayService, geminiMessagesCompatService, antigravityGatewayService, userService, concurrencyService, billingCacheService, usageService, apiKeyService, usageRecordWorkerPool, errorPassthroughService, contentModerationService, userMessageQueueService, configConfig, settingService, coordinator, geminiCachedContentService)
 	openAIGatewayHandler := handler.ProvideOpenAIGatewayHandler(openAIGatewayService, pluginManager, concurrencyService, billingCacheService, apiKeyService, usageRecordWorkerPool, errorPassthroughService, contentModerationService, opsService, grokQuotaService, configConfig, coordinator, compositeRouteResolver)
+	ecosystemTokenVerifier := service.ProvideEcosystemTokenVerifier(configConfig)
+	ecosystemService := service.NewEcosystemService(ecosystemRepository, apiKeyService, gatewayService, compositeRouteResolver, configConfig)
+	ecosystemHandler := handler.NewEcosystemHandler(ecosystemTokenVerifier, ecosystemService, configConfig)
 	handlerSettingHandler := handler.ProvideSettingHandler(settingService, buildInfo, notificationEmailService)
 	totpHandler := handler.NewTotpHandler(totpService)
 	passkeyRepository := repository.NewPasskeyRepository(db)
@@ -328,7 +332,7 @@ func initializeApplication(buildInfo handler.BuildInfo) (*Application, error) {
 	batchImageHandler := handler.ProvideBatchImageHandler(batchImagePublicService, batchImageDownloadService, batchImageCleanupService, openAIGatewayHandler)
 	idempotencyCleanupService := service.ProvideIdempotencyCleanupService(idempotencyRepository, configConfig)
 	openAIQuotaAutoResetService := service.ProvideOpenAIQuotaAutoResetService(accountRepository, openAIQuotaService, rateLimitService, idempotencyCoordinator, auditLogService, settingService, leaderLockCache)
-	handlers := handler.ProvideHandlers(authHandler, userHandler, apiKeyHandler, usageHandler, redeemHandler, subscriptionHandler, announcementHandler, channelMonitorUserHandler, channelMonitorV2Handler, adminHandlers, gatewayHandler, openAIGatewayHandler, handlerSettingHandler, totpHandler, passkeyHandler, handlerPaymentHandler, paymentWebhookHandler, availableChannelHandler, modelPlazaHandler, asyncImageHandler, batchImageHandler, idempotencyCoordinator, idempotencyCleanupService, openAIQuotaAutoResetService)
+	handlers := handler.ProvideHandlers(authHandler, userHandler, apiKeyHandler, usageHandler, redeemHandler, subscriptionHandler, announcementHandler, channelMonitorUserHandler, channelMonitorV2Handler, adminHandlers, gatewayHandler, openAIGatewayHandler, handlerSettingHandler, totpHandler, passkeyHandler, handlerPaymentHandler, paymentWebhookHandler, availableChannelHandler, modelPlazaHandler, asyncImageHandler, batchImageHandler, ecosystemHandler, idempotencyCoordinator, idempotencyCleanupService, openAIQuotaAutoResetService)
 	jwtAuthMiddleware := middleware.NewJWTAuthMiddleware(authService, userService, settingService, auditLogService)
 	optionalJWTAuthMiddleware := middleware.NewOptionalJWTAuthMiddleware(authService, userService, settingService, auditLogService)
 	adminAuthMiddleware := middleware.NewAdminAuthMiddleware(authService, userService, settingService, auditLogService)
