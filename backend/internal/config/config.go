@@ -66,46 +66,54 @@ const DefaultUpstreamResponseReadMaxBytes int64 = 128 * 1024 * 1024
 const DefaultModelsListReadMaxBytes int64 = 8 * 1024 * 1024
 
 type Config struct {
-	Server                  ServerConfig                     `mapstructure:"server"`
-	Log                     LogConfig                        `mapstructure:"log"`
-	CORS                    CORSConfig                       `mapstructure:"cors"`
-	Security                SecurityConfig                   `mapstructure:"security"`
-	Billing                 BillingConfig                    `mapstructure:"billing"`
-	Turnstile               TurnstileConfig                  `mapstructure:"turnstile"`
-	Database                DatabaseConfig                   `mapstructure:"database"`
-	Redis                   RedisConfig                      `mapstructure:"redis"`
-	Ops                     OpsConfig                        `mapstructure:"ops"`
-	JWT                     JWTConfig                        `mapstructure:"jwt"`
-	Totp                    TotpConfig                       `mapstructure:"totp"`
-	WebAuthn                WebAuthnConfig                   `mapstructure:"webauthn"`
-	LinuxDo                 LinuxDoConnectConfig             `mapstructure:"linuxdo_connect"`
-	WeChat                  WeChatConnectConfig              `mapstructure:"wechat_connect"`
-	OIDC                    OIDCConnectConfig                `mapstructure:"oidc_connect"`
-	Ecosystem               EcosystemConfig                  `mapstructure:"ecosystem"`
-	ecosystemLive           *atomic.Pointer[EcosystemConfig] `mapstructure:"-" yaml:"-"`
-	DingTalk                DingTalkConnectConfig            `mapstructure:"dingtalk_connect"`
-	GitHubOAuth             EmailOAuthProviderConfig         `mapstructure:"github_oauth"`
-	GoogleOAuth             EmailOAuthProviderConfig         `mapstructure:"google_oauth"`
-	Default                 DefaultConfig                    `mapstructure:"default"`
-	RateLimit               RateLimitConfig                  `mapstructure:"rate_limit"`
-	Pricing                 PricingConfig                    `mapstructure:"pricing"`
-	Gateway                 GatewayConfig                    `mapstructure:"gateway"`
-	APIKeyAuth              APIKeyAuthCacheConfig            `mapstructure:"api_key_auth_cache"`
-	SubscriptionCache       SubscriptionCacheConfig          `mapstructure:"subscription_cache"`
-	SubscriptionMaintenance SubscriptionMaintenanceConfig    `mapstructure:"subscription_maintenance"`
-	Dashboard               DashboardCacheConfig             `mapstructure:"dashboard_cache"`
-	DashboardAgg            DashboardAggregationConfig       `mapstructure:"dashboard_aggregation"`
-	UsageCleanup            UsageCleanupConfig               `mapstructure:"usage_cleanup"`
-	Concurrency             ConcurrencyConfig                `mapstructure:"concurrency"`
-	TokenRefresh            TokenRefreshConfig               `mapstructure:"token_refresh"`
-	RunMode                 string                           `mapstructure:"run_mode" yaml:"run_mode"`
-	Timezone                string                           `mapstructure:"timezone"` // e.g. "Asia/Shanghai", "UTC"
-	Gemini                  GeminiConfig                     `mapstructure:"gemini"`
-	Update                  UpdateConfig                     `mapstructure:"update"`
-	Idempotency             IdempotencyConfig                `mapstructure:"idempotency"`
-	BatchImage              BatchImageConfig                 `mapstructure:"batch_image"`
-	ImageStorage            ImageStorageConfig               `mapstructure:"image_storage"`
-	Plugins                 PluginConfig                     `mapstructure:"plugins"`
+	Server                  ServerConfig                  `mapstructure:"server"`
+	Log                     LogConfig                     `mapstructure:"log"`
+	CORS                    CORSConfig                    `mapstructure:"cors"`
+	Security                SecurityConfig                `mapstructure:"security"`
+	Billing                 BillingConfig                 `mapstructure:"billing"`
+	Turnstile               TurnstileConfig               `mapstructure:"turnstile"`
+	Database                DatabaseConfig                `mapstructure:"database"`
+	Redis                   RedisConfig                   `mapstructure:"redis"`
+	Ops                     OpsConfig                     `mapstructure:"ops"`
+	JWT                     JWTConfig                     `mapstructure:"jwt"`
+	Totp                    TotpConfig                    `mapstructure:"totp"`
+	WebAuthn                WebAuthnConfig                `mapstructure:"webauthn"`
+	LinuxDo                 LinuxDoConnectConfig          `mapstructure:"linuxdo_connect"`
+	WeChat                  WeChatConnectConfig           `mapstructure:"wechat_connect"`
+	OIDC                    OIDCConnectConfig             `mapstructure:"oidc_connect"`
+	DingTalk                DingTalkConnectConfig         `mapstructure:"dingtalk_connect"`
+	GitHubOAuth             EmailOAuthProviderConfig      `mapstructure:"github_oauth"`
+	GoogleOAuth             EmailOAuthProviderConfig      `mapstructure:"google_oauth"`
+	Default                 DefaultConfig                 `mapstructure:"default"`
+	RateLimit               RateLimitConfig               `mapstructure:"rate_limit"`
+	Pricing                 PricingConfig                 `mapstructure:"pricing"`
+	Gateway                 GatewayConfig                 `mapstructure:"gateway"`
+	APIKeyAuth              APIKeyAuthCacheConfig         `mapstructure:"api_key_auth_cache"`
+	APIKeyCreate            APIKeyCreateConfig            `mapstructure:"api_key_create"`
+	SubscriptionCache       SubscriptionCacheConfig       `mapstructure:"subscription_cache"`
+	SubscriptionMaintenance SubscriptionMaintenanceConfig `mapstructure:"subscription_maintenance"`
+	Dashboard               DashboardCacheConfig          `mapstructure:"dashboard_cache"`
+	DashboardAgg            DashboardAggregationConfig    `mapstructure:"dashboard_aggregation"`
+	UsageCleanup            UsageCleanupConfig            `mapstructure:"usage_cleanup"`
+	Concurrency             ConcurrencyConfig             `mapstructure:"concurrency"`
+	TokenRefresh            TokenRefreshConfig            `mapstructure:"token_refresh"`
+	SimpleMode              SimpleModeConfig              `mapstructure:"simple_mode" yaml:"simple_mode"`
+	RunMode                 string                        `mapstructure:"run_mode" yaml:"run_mode"`
+	Timezone                string                        `mapstructure:"timezone"` // e.g. "Asia/Shanghai", "UTC"
+	Gemini                  GeminiConfig                  `mapstructure:"gemini"`
+	Update                  UpdateConfig                  `mapstructure:"update"`
+	Idempotency             IdempotencyConfig             `mapstructure:"idempotency"`
+	BatchImage              BatchImageConfig              `mapstructure:"batch_image"`
+	ImageStorage            ImageStorageConfig            `mapstructure:"image_storage"`
+	Plugins                 PluginConfig                  `mapstructure:"plugins"`
+
+	// Enforce only API-key spending windows in simple mode.
+	SimpleModeKeyRateLimitEnabled bool `mapstructure:"simple_mode_key_rate_limit_enabled" yaml:"simple_mode_key_rate_limit_enabled"`
+}
+
+// SimpleModeConfig controls startup behavior in simple mode.
+type SimpleModeConfig struct {
+	AutoCreateDefaultGroups bool `mapstructure:"auto_create_default_groups" yaml:"auto_create_default_groups"`
 }
 
 // PluginConfig 控制管理员手动上传的本地进程插件。
@@ -359,56 +367,6 @@ type OIDCConnectConfig struct {
 	UserInfoEmailPath    string `mapstructure:"userinfo_email_path"`
 	UserInfoIDPath       string `mapstructure:"userinfo_id_path"`
 	UserInfoUsernamePath string `mapstructure:"userinfo_username_path"`
-}
-
-// EcosystemConfig configures the read-only Logto resource adapter. It is
-// intentionally separate from OIDCConnectConfig: the latter validates login ID
-// tokens, while this adapter validates access tokens for an API resource.
-type EcosystemConfig struct {
-	Enabled                       bool     `mapstructure:"enabled"`
-	IssuerURL                     string   `mapstructure:"issuer_url"`
-	Audience                      string   `mapstructure:"audience"`
-	JWKSURL                       string   `mapstructure:"jwks_url"`
-	AllowedClientIDs              []string `mapstructure:"allowed_client_ids"`
-	PublicGatewayURL              string   `mapstructure:"public_gateway_url"`
-	AllowedSigningAlgs            []string `mapstructure:"allowed_signing_algs"`
-	ClockSkewSeconds              int      `mapstructure:"clock_skew_seconds"`
-	JWKSRequestTimeoutSeconds     int      `mapstructure:"jwks_request_timeout_seconds"`
-	JWKSMaxResponseBytes          int64    `mapstructure:"jwks_max_response_bytes"`
-	JWKSCacheTTLSeconds           int      `mapstructure:"jwks_cache_ttl_seconds"`
-	JWKSRefreshMinIntervalSeconds int      `mapstructure:"jwks_refresh_min_interval_seconds"`
-	RateLimitPerMinute            int      `mapstructure:"rate_limit_per_minute"`
-}
-
-func cloneEcosystemConfig(value EcosystemConfig) EcosystemConfig {
-	value.AllowedClientIDs = append([]string(nil), value.AllowedClientIDs...)
-	value.AllowedSigningAlgs = append([]string(nil), value.AllowedSigningAlgs...)
-	return value
-}
-
-// EcosystemSettings returns an immutable snapshot of the runtime ecosystem configuration.
-func (c *Config) EcosystemSettings() EcosystemConfig {
-	if c == nil {
-		return EcosystemConfig{}
-	}
-	if c.ecosystemLive != nil {
-		if snapshot := c.ecosystemLive.Load(); snapshot != nil {
-			return cloneEcosystemConfig(*snapshot)
-		}
-	}
-	return cloneEcosystemConfig(c.Ecosystem)
-}
-
-// SetEcosystemSettings atomically replaces the runtime ecosystem configuration.
-func (c *Config) SetEcosystemSettings(value EcosystemConfig) {
-	if c == nil {
-		return
-	}
-	if c.ecosystemLive == nil {
-		c.ecosystemLive = &atomic.Pointer[EcosystemConfig]{}
-	}
-	snapshot := cloneEcosystemConfig(value)
-	c.ecosystemLive.Store(&snapshot)
 }
 
 type DingTalkConnectConfig struct {
@@ -964,6 +922,29 @@ type BillingConfig struct {
 	// UserPlatformQuotaSentinelTTLSeconds sentinel(无 limit 占位)entry 的 TTL,
 	// 显著短于 quota cache 默认 86400s 以控 Redis 内存;默认 3600=1h。
 	UserPlatformQuotaSentinelTTLSeconds int `mapstructure:"user_platform_quota_sentinel_ttl_seconds"`
+	// InflightReservation 余额模式在途请求预留（Redis），防止并发请求在预检时看到同一份余额而集体透支。
+	InflightReservation InflightReservationConfig `mapstructure:"inflight_reservation"`
+}
+
+// InflightReservationConfig 余额模式在途预留配置。
+// 准入时按 输入估算 + 输出单价 × max_tokens 估算单请求费用，在 Redis 中原子地
+// 校验 缓存余额 - 在途预留合计 >= 估算 后登记预留，请求结束（任意路径）释放。
+// 估算失败或 Redis 不可用时 fail-open，退回旧的仅余额 > 阈值检查。
+type InflightReservationConfig struct {
+	Enabled bool `mapstructure:"enabled"`
+	// TTLSeconds 单条预留的最长存活时间；进程崩溃等泄漏的预留到期自动失效。
+	TTLSeconds int `mapstructure:"ttl_seconds"`
+	// DefaultMaxTokens 请求未携带 max_tokens 时用于估算的输出 token 数。
+	DefaultMaxTokens int `mapstructure:"default_max_tokens"`
+	// MaxOutputTokens 估算输出 token 的上限（max_tokens 超出时截断）。
+	MaxOutputTokens int `mapstructure:"max_output_tokens"`
+	// MaxInputTokens 输入 token 估算（请求体字节数 / 4）的上限。
+	MaxInputTokens int `mapstructure:"max_input_tokens"`
+	// MaxReservationUSD 单请求预留金额上限；0 表示不设上限。
+	MaxReservationUSD float64 `mapstructure:"max_reservation_usd"`
+	// FailClosedOnUnpriced 无法为请求估算费用（模型/分组/渠道均无定价）时是否拒绝请求。
+	// 默认 false：放行且不预留（fail-open，节流告警日志）。
+	FailClosedOnUnpriced bool `mapstructure:"fail_closed_on_unpriced"`
 }
 
 type CircuitBreakerConfig struct {
@@ -998,6 +979,9 @@ const (
 
 // GatewayConfig API网关相关配置
 type GatewayConfig struct {
+	// MinOutputTokens is the minimum max_output_tokens used when
+	// converting Chat Completions or Anthropic requests to Responses.
+	MinOutputTokens int `mapstructure:"min_output_tokens"`
 	// 等待上游响应头的超时时间（秒），0表示无超时
 	// 注意：这不影响流式数据传输，只控制等待响应头的时间
 	ResponseHeaderTimeout int `mapstructure:"response_header_timeout"`
@@ -1024,6 +1008,8 @@ type GatewayConfig struct {
 	ProxyProbeResponseReadMaxBytes int64 `mapstructure:"proxy_probe_response_read_max_bytes"`
 	// Gemini 上游响应头调试日志开关（默认关闭，避免高频日志开销）
 	GeminiDebugResponseHeaders bool `mapstructure:"gemini_debug_response_headers"`
+	// GeminiCachedContentMaxTTLSeconds: Gemini 显式缓存单次可设置的最长有效期（秒），<=0 时按 86400 处理
+	GeminiCachedContentMaxTTLSeconds int `mapstructure:"gemini_cached_content_max_ttl_seconds"`
 	// ConnectionPoolIsolation: 上游连接池隔离策略（proxy/account/account_proxy）
 	ConnectionPoolIsolation string `mapstructure:"connection_pool_isolation"`
 	// ForceCodexCLI: 强制将 OpenAI `/v1/responses` 请求按 Codex CLI 处理。
@@ -1739,6 +1725,14 @@ type APIKeyAuthCacheConfig struct {
 	InvalidAbuse       InvalidAuthAbuseConfig `mapstructure:"invalid_abuse"`
 }
 
+// APIKeyCreateConfig 用户创建 API Key 的防滥用限制（0 表示不限制）
+type APIKeyCreateConfig struct {
+	// MaxActivePerUser 单个用户同时存在（未删除）的 API Key 上限
+	MaxActivePerUser int `mapstructure:"max_active_per_user"`
+	// MaxPerUserPerHour 单个用户每小时可创建的 API Key 次数（删除不返还次数）
+	MaxPerUserPerHour int `mapstructure:"max_per_user_per_hour"`
+}
+
 type InvalidAuthAbuseConfig struct {
 	Enabled       bool `mapstructure:"enabled"`
 	Threshold     int  `mapstructure:"threshold"`
@@ -1877,15 +1871,6 @@ func load(allowMissingJWTSecret bool) (*Config, error) {
 	if forwardedClientIPHeadersEnvConfigured {
 		cfg.Security.ForwardedClientIPHeaders = normalizeStringSlice(strings.Split(forwardedClientIPHeadersEnv, ","))
 	}
-	// Viper's weakly typed decode does not reliably split comma-separated
-	// environment variables into []string. Keep list-valued deployment knobs
-	// explicit so env and YAML have the same semantics.
-	if allowedClients, ok := os.LookupEnv("ECOSYSTEM_ALLOWED_CLIENT_IDS"); ok {
-		cfg.Ecosystem.AllowedClientIDs = normalizeStringSlice(strings.Split(allowedClients, ","))
-	}
-	if signingAlgs, ok := os.LookupEnv("ECOSYSTEM_ALLOWED_SIGNING_ALGS"); ok {
-		cfg.Ecosystem.AllowedSigningAlgs = normalizeStringSlice(strings.Split(signingAlgs, ","))
-	}
 	cfg.Server.TrustedProxiesConfigured = trustedProxiesConfigured
 	if cfg.Gateway.OpenAIScheduler.StickyEscapeTTFTMs == 0 {
 		cfg.Gateway.OpenAIScheduler.StickyEscapeTTFTMs = 15000
@@ -1940,12 +1925,6 @@ func load(allowMissingJWTSecret bool) (*Config, error) {
 	cfg.OIDC.UserInfoUsernamePath = strings.TrimSpace(cfg.OIDC.UserInfoUsernamePath)
 	cfg.OIDC.UsePKCEExplicit = hasExplicitConfigOrEnv("oidc_connect.use_pkce", "OIDC_CONNECT_USE_PKCE")
 	cfg.OIDC.ValidateIDTokenExplicit = hasExplicitConfigOrEnv("oidc_connect.validate_id_token", "OIDC_CONNECT_VALIDATE_ID_TOKEN")
-	cfg.Ecosystem.IssuerURL = strings.TrimSpace(cfg.Ecosystem.IssuerURL)
-	cfg.Ecosystem.Audience = strings.TrimSpace(cfg.Ecosystem.Audience)
-	cfg.Ecosystem.JWKSURL = strings.TrimSpace(cfg.Ecosystem.JWKSURL)
-	cfg.Ecosystem.AllowedClientIDs = normalizeStringSlice(cfg.Ecosystem.AllowedClientIDs)
-	cfg.Ecosystem.PublicGatewayURL = strings.TrimRight(strings.TrimSpace(cfg.Ecosystem.PublicGatewayURL), "/")
-	cfg.Ecosystem.AllowedSigningAlgs = normalizeStringSlice(cfg.Ecosystem.AllowedSigningAlgs)
 	cfg.Dashboard.KeyPrefix = strings.TrimSpace(cfg.Dashboard.KeyPrefix)
 	cfg.CORS.AllowedOrigins = normalizeStringSlice(cfg.CORS.AllowedOrigins)
 	cfg.Security.ResponseHeaders.AdditionalAllowed = normalizeStringSlice(cfg.Security.ResponseHeaders.AdditionalAllowed)
@@ -2059,6 +2038,9 @@ func configureConfigSource(setConfigFile, addConfigPath func(string)) {
 
 func setDefaults() {
 	viper.SetDefault("run_mode", RunModeStandard)
+	viper.SetDefault("gateway.min_output_tokens", 128)
+	viper.SetDefault("simple_mode.auto_create_default_groups", true)
+	viper.SetDefault("simple_mode_key_rate_limit_enabled", false)
 
 	// Server
 	viper.SetDefault("server.host", "0.0.0.0")
@@ -2114,6 +2096,7 @@ func setDefaults() {
 		"api.openai.com",
 		"api.anthropic.com",
 		"api.kimi.com",
+		"api.kimi.ai",
 		"api.moonshot.ai",
 		"api.moonshot.cn",
 		"open.bigmodel.cn",
@@ -2149,6 +2132,13 @@ func setDefaults() {
 	viper.SetDefault("billing.minimum_balance_reserve", 0.000001)
 	viper.SetDefault("billing.user_platform_quota_cache_ttl_seconds", 86400)
 	viper.SetDefault("billing.user_platform_quota_sentinel_ttl_seconds", 3600)
+	viper.SetDefault("billing.inflight_reservation.enabled", true)
+	viper.SetDefault("billing.inflight_reservation.ttl_seconds", 900)
+	viper.SetDefault("billing.inflight_reservation.default_max_tokens", 8192)
+	viper.SetDefault("billing.inflight_reservation.max_output_tokens", 128000)
+	viper.SetDefault("billing.inflight_reservation.max_input_tokens", 200000)
+	viper.SetDefault("billing.inflight_reservation.max_reservation_usd", 0)
+	viper.SetDefault("billing.inflight_reservation.fail_closed_on_unpriced", false)
 
 	// Turnstile
 	viper.SetDefault("turnstile.required", false)
@@ -2225,7 +2215,6 @@ func setDefaults() {
 	viper.SetDefault("ecosystem.jwks_cache_ttl_seconds", 300)
 	viper.SetDefault("ecosystem.jwks_refresh_min_interval_seconds", 60)
 	viper.SetDefault("ecosystem.rate_limit_per_minute", 120)
-
 	// DingTalk Connect OAuth 登录
 	viper.SetDefault("dingtalk_connect.enabled", false)
 	viper.SetDefault("dingtalk_connect.authorize_url", "https://login.dingtalk.com/oauth2/auth")
@@ -2403,6 +2392,8 @@ func setDefaults() {
 	viper.SetDefault("api_key_auth_cache.invalid_abuse.window_seconds", 60)
 	viper.SetDefault("api_key_auth_cache.invalid_abuse.block_seconds", 60)
 	viper.SetDefault("api_key_auth_cache.invalid_abuse.capacity", 16384)
+	viper.SetDefault("api_key_create.max_active_per_user", 200)
+	viper.SetDefault("api_key_create.max_per_user_per_hour", 60)
 
 	// Subscription auth L1 cache
 	viper.SetDefault("subscription_cache.l1_size", 16384)
@@ -2557,6 +2548,7 @@ func setDefaults() {
 	viper.SetDefault("gateway.models_list_read_max_bytes", DefaultModelsListReadMaxBytes)
 	viper.SetDefault("gateway.proxy_probe_response_read_max_bytes", int64(1024*1024))
 	viper.SetDefault("gateway.gemini_debug_response_headers", false)
+	viper.SetDefault("gateway.gemini_cached_content_max_ttl_seconds", 86400)
 	viper.SetDefault("gateway.connection_pool_isolation", ConnectionPoolIsolationAccountProxy)
 	// HTTP 上游连接池配置（针对 5000+ 并发用户优化）
 	viper.SetDefault("gateway.max_idle_conns", 2560)          // 最大空闲连接总数（高并发场景可调大）
@@ -2733,6 +2725,9 @@ func setEnvReachableDefaults() {
 }
 
 func (c *Config) Validate() error {
+	if c.Gateway.MinOutputTokens < 16 {
+		return fmt.Errorf("gateway.min_output_tokens must be at least 16")
+	}
 	forwardedClientIPHeaders, err := NormalizeForwardedClientIPHeaders(c.Security.ForwardedClientIPHeaders)
 	if err != nil {
 		return fmt.Errorf("security.forwarded_client_ip_headers: %w", err)
@@ -2781,6 +2776,12 @@ func (c *Config) Validate() error {
 		if c.Server.H2C.MaxUploadBufferPerStream <= 0 {
 			return fmt.Errorf("server.h2c.max_upload_buffer_per_stream must be positive")
 		}
+	}
+	if c.APIKeyCreate.MaxActivePerUser < 0 {
+		return fmt.Errorf("api_key_create.max_active_per_user must be non-negative")
+	}
+	if c.APIKeyCreate.MaxPerUserPerHour < 0 {
+		return fmt.Errorf("api_key_create.max_per_user_per_hour must be non-negative")
 	}
 	if c.APIKeyAuth.InvalidAbuse.Enabled {
 		if c.APIKeyAuth.InvalidAbuse.Threshold < 10 {
@@ -3119,67 +3120,6 @@ func (c *Config) Validate() error {
 		warnIfInsecureURL("oidc_connect.redirect_url", c.OIDC.RedirectURL)
 		warnIfInsecureURL("oidc_connect.frontend_redirect_url", c.OIDC.FrontendRedirectURL)
 	}
-	if c.Ecosystem.Enabled {
-		if strings.TrimSpace(c.Ecosystem.IssuerURL) == "" {
-			return fmt.Errorf("ecosystem.issuer_url is required when ecosystem.enabled=true")
-		}
-		if strings.TrimSpace(c.Ecosystem.Audience) == "" {
-			return fmt.Errorf("ecosystem.audience is required when ecosystem.enabled=true")
-		}
-		if strings.TrimSpace(c.Ecosystem.JWKSURL) == "" {
-			return fmt.Errorf("ecosystem.jwks_url is required when ecosystem.enabled=true")
-		}
-		if len(c.Ecosystem.AllowedClientIDs) == 0 {
-			return fmt.Errorf("ecosystem.allowed_client_ids must contain at least one client when ecosystem.enabled=true")
-		}
-		if strings.TrimSpace(c.Ecosystem.PublicGatewayURL) == "" {
-			return fmt.Errorf("ecosystem.public_gateway_url is required when ecosystem.enabled=true")
-		}
-		for name, rawURL := range map[string]string{
-			"ecosystem.issuer_url":         c.Ecosystem.IssuerURL,
-			"ecosystem.jwks_url":           c.Ecosystem.JWKSURL,
-			"ecosystem.public_gateway_url": c.Ecosystem.PublicGatewayURL,
-		} {
-			if err := ValidateAbsoluteHTTPURL(rawURL); err != nil {
-				return fmt.Errorf("%s invalid: %w", name, err)
-			}
-			parsed, err := url.Parse(rawURL)
-			if err != nil || parsed.User != nil || parsed.RawQuery != "" || parsed.Fragment != "" {
-				return fmt.Errorf("%s invalid: userinfo, query, and fragment are not allowed", name)
-			}
-		}
-		allowedAlgs := map[string]struct{}{
-			"RS256": {}, "RS384": {}, "RS512": {},
-			"PS256": {}, "PS384": {}, "PS512": {},
-			"ES256": {}, "ES384": {}, "ES512": {},
-		}
-		if len(c.Ecosystem.AllowedSigningAlgs) == 0 {
-			return fmt.Errorf("ecosystem.allowed_signing_algs must not be empty")
-		}
-		for _, alg := range c.Ecosystem.AllowedSigningAlgs {
-			if _, ok := allowedAlgs[alg]; !ok {
-				return fmt.Errorf("ecosystem.allowed_signing_algs contains unsupported algorithm %q", alg)
-			}
-		}
-		if c.Ecosystem.ClockSkewSeconds < 0 || c.Ecosystem.ClockSkewSeconds > 600 {
-			return fmt.Errorf("ecosystem.clock_skew_seconds must be between 0 and 600")
-		}
-		if c.Ecosystem.JWKSRequestTimeoutSeconds < 1 || c.Ecosystem.JWKSRequestTimeoutSeconds > 30 {
-			return fmt.Errorf("ecosystem.jwks_request_timeout_seconds must be between 1 and 30")
-		}
-		if c.Ecosystem.JWKSMaxResponseBytes < 1024 || c.Ecosystem.JWKSMaxResponseBytes > 16*1024*1024 {
-			return fmt.Errorf("ecosystem.jwks_max_response_bytes must be between 1024 and 16777216")
-		}
-		if c.Ecosystem.JWKSCacheTTLSeconds < 1 || c.Ecosystem.JWKSCacheTTLSeconds > 86400 {
-			return fmt.Errorf("ecosystem.jwks_cache_ttl_seconds must be between 1 and 86400")
-		}
-		if c.Ecosystem.JWKSRefreshMinIntervalSeconds < 1 || c.Ecosystem.JWKSRefreshMinIntervalSeconds > 3600 {
-			return fmt.Errorf("ecosystem.jwks_refresh_min_interval_seconds must be between 1 and 3600")
-		}
-		if c.Ecosystem.RateLimitPerMinute < 1 || c.Ecosystem.RateLimitPerMinute > 10000 {
-			return fmt.Errorf("ecosystem.rate_limit_per_minute must be between 1 and 10000")
-		}
-	}
 	if c.Billing.CircuitBreaker.Enabled {
 		if c.Billing.CircuitBreaker.FailureThreshold <= 0 {
 			return fmt.Errorf("billing.circuit_breaker.failure_threshold must be positive")
@@ -3193,6 +3133,11 @@ func (c *Config) Validate() error {
 	}
 	if c.Billing.MinimumBalanceReserve < 0 {
 		return fmt.Errorf("billing.minimum_balance_reserve must be non-negative")
+	}
+	if c.Billing.InflightReservation.TTLSeconds < 0 || c.Billing.InflightReservation.DefaultMaxTokens < 0 ||
+		c.Billing.InflightReservation.MaxOutputTokens < 0 || c.Billing.InflightReservation.MaxInputTokens < 0 ||
+		c.Billing.InflightReservation.MaxReservationUSD < 0 {
+		return fmt.Errorf("billing.inflight_reservation values must be non-negative")
 	}
 	if c.Database.MaxOpenConns <= 0 {
 		return fmt.Errorf("database.max_open_conns must be positive")
