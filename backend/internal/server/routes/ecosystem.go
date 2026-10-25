@@ -21,6 +21,7 @@ func RegisterEcosystemRoutes(
 	}
 	ecosystem.Use(gin.HandlerFunc(auditLog))
 	{
+		ecosystem.GET("/docs", h.Docs)
 		ecosystem.GET("/me", h.Me)
 		ecosystem.GET("/groups", h.Groups)
 		ecosystem.GET("/models", h.Models)

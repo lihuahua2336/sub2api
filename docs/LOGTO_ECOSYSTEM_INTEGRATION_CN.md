@@ -13,7 +13,7 @@ Logto 中需要区分两个对象：
 | sub2api | API Resource | `https://sub.eggai.icu/api` | Access Token 的 audience，由 sub2api 验签并提供资源 |
 | infinite-canvas 或其他前端/BFF | Traditional Web 应用 | Client ID `k26euxjmqraz9vt5chzq1` | 发起用户登录，为指定 API Resource 申请 Access Token |
 
-对于自有的服务端 Web 应用，应创建 **Traditional Web（传统网页应用）**，不要把 sub2api 创建成登录客户端，也不要把自有应用误建成第三方应用。第三方应用适用于外部开发者集成，会增加权限申请和用户授权约束。
+对于自有的服务端 Web 应用，应创建 **Traditional Web（传统网页应用）**，必须使用你的应用，不要把 sub2api 创建成登录客户端，也不要创建 Logto 的第三方应用类型。接入方只需要创建自己的 Traditional Web 应用，并按本文申请 sub2api API Resource Token。
 
 请求链路如下：
 
@@ -59,7 +59,7 @@ Identifier 必须与 sub2api 的 `Audience` 以及客户端请求的 resource �
 
 ### 2.3 创建业务应用
 
-为每个接入应用创建独立的 Traditional Web 应用。以 infinite-canvas 为例：
+为每个接入应用创建自己的 Traditional Web 应用。以 infinite-canvas 为例：
 
 ```text
 应用类型：Traditional Web
@@ -69,7 +69,15 @@ Post sign-out redirect URI：https://canvas.eggai.icu/
 
 记录该应用的 Client ID 和 Client Secret。Client Secret 只能保存在服务端 Secret 或环境变量中，不能进入浏览器代码、镜像仓库或文档。
 
-每增加一个应用，还需要把它的 Client ID 加入 sub2api 的 `Allowed Client IDs`。建议每个应用使用独立 Client ID，方便撤销、审计和限流。
+将该应用的 Client ID 加入 sub2api 的 `Allowed Client IDs`。建议每个接入项目使用独立 Client ID，方便撤销、审计和限流。
+
+sub2api 同时提供无需 Token 的说明接口：
+
+```text
+GET /api/v1/ecosystem/docs
+```
+
+该接口返回当前 API 列表、所需 scopes、Logto 配置步骤、sub2api 配置和第三方项目环境变量模板，适合第三方项目在接入时直接读取。
 
 ## 3. sub2api 配置
 

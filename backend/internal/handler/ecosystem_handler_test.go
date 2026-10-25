@@ -31,6 +31,38 @@ func (r ecosystemHandlerRepo) ListActiveKeys(context.Context, int64, pagination.
 
 type ecosystemHandlerGroups struct{}
 
+func TestEcosystemHandlerDocsPublic(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+	h := &EcosystemHandler{cfg: &config.Config{Ecosystem: config.EcosystemConfig{
+		PublicGatewayURL: "https://sub2api.example.com",
+		Audience:         "https://sub2api.example.com/api",
+		IssuerURL:        "https://logto.example.com/oidc",
+	}}}
+	router := gin.New()
+	router.GET("/api/v1/ecosystem/docs", h.Docs)
+
+	recorder := httptest.NewRecorder()
+	router.ServeHTTP(recorder, httptest.NewRequest(http.MethodGet, "/api/v1/ecosystem/docs", nil))
+
+	require.Equal(t, http.StatusOK, recorder.Code)
+	var payload struct {
+		Code int `json:"code"`
+		Data struct {
+			Authentication struct {
+				Resource string `json:"resource"`
+			} `json:"authentication"`
+			APIs []struct {
+				Path string `json:"path"`
+			} `json:"apis"`
+		} `json:"data"`
+	}
+	require.NoError(t, json.Unmarshal(recorder.Body.Bytes(), &payload))
+	require.Equal(t, 0, payload.Code)
+	require.Equal(t, "https://sub2api.example.com/api", payload.Data.Authentication.Resource)
+	require.Len(t, payload.Data.APIs, 4)
+	require.Equal(t, "/api/v1/ecosystem/me", payload.Data.APIs[0].Path)
+}
+
 func (ecosystemHandlerGroups) GetAvailableGroups(context.Context, int64) ([]service.Group, error) {
 	return []service.Group{}, nil
 }

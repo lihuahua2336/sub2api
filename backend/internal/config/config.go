@@ -2218,7 +2218,7 @@ func setDefaults() {
 	viper.SetDefault("ecosystem.jwks_url", "")
 	viper.SetDefault("ecosystem.allowed_client_ids", []string{})
 	viper.SetDefault("ecosystem.public_gateway_url", "")
-	viper.SetDefault("ecosystem.allowed_signing_algs", []string{"RS256", "ES256", "PS256"})
+	viper.SetDefault("ecosystem.allowed_signing_algs", []string{"RS256", "ES256", "ES384", "PS256"})
 	viper.SetDefault("ecosystem.clock_skew_seconds", 120)
 	viper.SetDefault("ecosystem.jwks_request_timeout_seconds", 10)
 	viper.SetDefault("ecosystem.jwks_max_response_bytes", 1048576)
