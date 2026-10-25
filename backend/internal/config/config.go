@@ -81,6 +81,8 @@ type Config struct {
 	LinuxDo                 LinuxDoConnectConfig          `mapstructure:"linuxdo_connect"`
 	WeChat                  WeChatConnectConfig           `mapstructure:"wechat_connect"`
 	OIDC                    OIDCConnectConfig             `mapstructure:"oidc_connect"`
+	Ecosystem               EcosystemConfig               `mapstructure:"ecosystem"`
+	ecosystemLive           *atomic.Pointer[EcosystemConfig] `mapstructure:"-" yaml:"-"`
 	DingTalk                DingTalkConnectConfig         `mapstructure:"dingtalk_connect"`
 	GitHubOAuth             EmailOAuthProviderConfig      `mapstructure:"github_oauth"`
 	GoogleOAuth             EmailOAuthProviderConfig      `mapstructure:"google_oauth"`
@@ -367,6 +369,54 @@ type OIDCConnectConfig struct {
 	UserInfoEmailPath    string `mapstructure:"userinfo_email_path"`
 	UserInfoIDPath       string `mapstructure:"userinfo_id_path"`
 	UserInfoUsernamePath string `mapstructure:"userinfo_username_path"`
+}
+
+// EcosystemConfig configures the Logto resource adapter.
+type EcosystemConfig struct {
+	Enabled                       bool     `mapstructure:"enabled"`
+	IssuerURL                     string   `mapstructure:"issuer_url"`
+	Audience                      string   `mapstructure:"audience"`
+	JWKSURL                       string   `mapstructure:"jwks_url"`
+	AllowedClientIDs              []string `mapstructure:"allowed_client_ids"`
+	PublicGatewayURL              string   `mapstructure:"public_gateway_url"`
+	AllowedSigningAlgs            []string `mapstructure:"allowed_signing_algs"`
+	ClockSkewSeconds              int      `mapstructure:"clock_skew_seconds"`
+	JWKSRequestTimeoutSeconds     int      `mapstructure:"jwks_request_timeout_seconds"`
+	JWKSMaxResponseBytes          int64    `mapstructure:"jwks_max_response_bytes"`
+	JWKSCacheTTLSeconds           int      `mapstructure:"jwks_cache_ttl_seconds"`
+	JWKSRefreshMinIntervalSeconds int      `mapstructure:"jwks_refresh_min_interval_seconds"`
+	RateLimitPerMinute            int      `mapstructure:"rate_limit_per_minute"`
+}
+
+func cloneEcosystemConfig(value EcosystemConfig) EcosystemConfig {
+	value.AllowedClientIDs = append([]string(nil), value.AllowedClientIDs...)
+	value.AllowedSigningAlgs = append([]string(nil), value.AllowedSigningAlgs...)
+	return value
+}
+
+// EcosystemSettings returns a snapshot of the runtime ecosystem configuration.
+func (c *Config) EcosystemSettings() EcosystemConfig {
+	if c == nil {
+		return EcosystemConfig{}
+	}
+	if c.ecosystemLive != nil {
+		if snapshot := c.ecosystemLive.Load(); snapshot != nil {
+			return cloneEcosystemConfig(*snapshot)
+		}
+	}
+	return cloneEcosystemConfig(c.Ecosystem)
+}
+
+// SetEcosystemSettings atomically replaces the runtime ecosystem configuration.
+func (c *Config) SetEcosystemSettings(value EcosystemConfig) {
+	if c == nil {
+		return
+	}
+	if c.ecosystemLive == nil {
+		c.ecosystemLive = &atomic.Pointer[EcosystemConfig]{}
+	}
+	snapshot := cloneEcosystemConfig(value)
+	c.ecosystemLive.Store(&snapshot)
 }
 
 type DingTalkConnectConfig struct {
