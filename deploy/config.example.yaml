@@ -1001,6 +1001,12 @@ oidc_connect:
 # =============================================================================
 # Logto ecosystem read-only adapter
 # Logto 生态只读适配层（默认关闭）
+# The admin Settings > Security page persists ecosystem values in the database.
+# Saved database values override these startup defaults and environment variables.
+# 管理后台“系统设置 > 安全设置 > Logto 生态适配层”保存到数据库，优先于启动配置。
+# ECOSYSTEM_ALLOWED_CLIENT_IDS accepts comma-separated Logto application client IDs.
+# Docker Compose must pass this variable into the container; .env interpolation alone is insufficient.
+# 环境变量需要通过 Compose 的 environment/env_file 传入容器；仅写入宿主机 .env 不会自动传入。
 # =============================================================================
 ecosystem:
   enabled: false

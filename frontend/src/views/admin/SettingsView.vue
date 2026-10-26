@@ -3787,6 +3787,103 @@
               </div>
             </div>
           </div>
+
+          <!-- Logto ecosystem resource access is independent of OIDC sign-in. -->
+          <div class="card" data-testid="ecosystem-settings">
+            <div class="border-b border-gray-100 px-6 py-4 dark:border-dark-700">
+              <h3 class="text-lg font-semibold text-gray-900 dark:text-white">
+                {{ t("admin.settings.oidc.ecosystemTitle") }}
+              </h3>
+              <p class="mt-1 text-sm text-gray-500 dark:text-gray-400">
+                {{ t("admin.settings.oidc.ecosystemDescription") }}
+              </p>
+            </div>
+            <div class="space-y-6 p-6">
+              <div class="flex items-center justify-between">
+                <label class="font-medium text-gray-900 dark:text-white">
+                  {{ t("admin.settings.oidc.ecosystemEnabled") }}
+                </label>
+                <Toggle v-model="form.ecosystem_enabled" data-testid="ecosystem-enabled" />
+              </div>
+              <div v-if="form.ecosystem_enabled" class="grid grid-cols-1 gap-6 lg:grid-cols-2">
+                <div>
+                  <label for="ecosystem_issuer_url" class="mb-2 block text-sm font-medium text-gray-700 dark:text-gray-300">
+                    {{ t("admin.settings.oidc.ecosystemIssuerUrl") }}
+                  </label>
+                  <input id="ecosystem_issuer_url" v-model="form.ecosystem_issuer_url" type="url" class="input font-mono text-sm" placeholder="https://auth.example.com/oidc" />
+                </div>
+                <div>
+                  <label for="ecosystem_audience" class="mb-2 block text-sm font-medium text-gray-700 dark:text-gray-300">
+                    {{ t("admin.settings.oidc.ecosystemAudience") }}
+                  </label>
+                  <input id="ecosystem_audience" v-model="form.ecosystem_audience" type="url" class="input font-mono text-sm" placeholder="https://api.example.com/api" />
+                </div>
+                <div>
+                  <label for="ecosystem_jwks_url" class="mb-2 block text-sm font-medium text-gray-700 dark:text-gray-300">
+                    {{ t("admin.settings.oidc.ecosystemJwksUrl") }}
+                  </label>
+                  <input id="ecosystem_jwks_url" v-model="form.ecosystem_jwks_url" type="url" class="input font-mono text-sm" placeholder="https://auth.example.com/oidc/jwks" />
+                </div>
+                <div>
+                  <label for="ecosystem_allowed_client_ids" class="mb-2 block text-sm font-medium text-gray-700 dark:text-gray-300">
+                    {{ t("admin.settings.oidc.ecosystemAllowedClientIds") }}
+                  </label>
+                  <input id="ecosystem_allowed_client_ids" v-model="form.ecosystem_allowed_client_ids" type="text" class="input font-mono text-sm" placeholder="client-id-1,client-id-2" />
+                  <p class="mt-2 text-sm text-gray-500 dark:text-gray-400">
+                    {{ localText("填写第三方应用（如 EggDoc）的 Logto Client ID；多个 ID 用英文逗号分隔，保留已有应用。此处不填写 Client Secret。", "Enter the Logto Client IDs of integrations such as EggDoc, separated by commas. Keep existing applications. Do not enter client secrets.") }}
+                  </p>
+                </div>
+                <div>
+                  <label for="ecosystem_public_gateway_url" class="mb-2 block text-sm font-medium text-gray-700 dark:text-gray-300">
+                    {{ t("admin.settings.oidc.ecosystemPublicGatewayUrl") }}
+                  </label>
+                  <input id="ecosystem_public_gateway_url" v-model="form.ecosystem_public_gateway_url" type="url" class="input font-mono text-sm" placeholder="https://api.example.com" />
+                </div>
+                <div>
+                  <label for="ecosystem_allowed_signing_algs" class="mb-2 block text-sm font-medium text-gray-700 dark:text-gray-300">
+                    {{ t("admin.settings.oidc.ecosystemAllowedSigningAlgs") }}
+                  </label>
+                  <input id="ecosystem_allowed_signing_algs" v-model="form.ecosystem_allowed_signing_algs" type="text" class="input font-mono text-sm" placeholder="RS256,ES256,PS256" />
+                </div>
+                <div>
+                  <label for="ecosystem_clock_skew_seconds" class="mb-2 block text-sm font-medium text-gray-700 dark:text-gray-300">
+                    {{ t("admin.settings.oidc.ecosystemClockSkewSeconds") }}
+                  </label>
+                  <input id="ecosystem_clock_skew_seconds" v-model.number="form.ecosystem_clock_skew_seconds" type="number" min="0" max="600" class="input" />
+                </div>
+                <div>
+                  <label for="ecosystem_jwks_request_timeout_seconds" class="mb-2 block text-sm font-medium text-gray-700 dark:text-gray-300">
+                    {{ t("admin.settings.oidc.ecosystemJwksRequestTimeoutSeconds") }}
+                  </label>
+                  <input id="ecosystem_jwks_request_timeout_seconds" v-model.number="form.ecosystem_jwks_request_timeout_seconds" type="number" min="1" max="30" class="input" />
+                </div>
+                <div>
+                  <label for="ecosystem_jwks_max_response_bytes" class="mb-2 block text-sm font-medium text-gray-700 dark:text-gray-300">
+                    {{ t("admin.settings.oidc.ecosystemJwksMaxResponseBytes") }}
+                  </label>
+                  <input id="ecosystem_jwks_max_response_bytes" v-model.number="form.ecosystem_jwks_max_response_bytes" type="number" min="1024" max="16777216" class="input" />
+                </div>
+                <div>
+                  <label for="ecosystem_jwks_cache_ttl_seconds" class="mb-2 block text-sm font-medium text-gray-700 dark:text-gray-300">
+                    {{ t("admin.settings.oidc.ecosystemJwksCacheTtlSeconds") }}
+                  </label>
+                  <input id="ecosystem_jwks_cache_ttl_seconds" v-model.number="form.ecosystem_jwks_cache_ttl_seconds" type="number" min="1" max="86400" class="input" />
+                </div>
+                <div>
+                  <label for="ecosystem_jwks_refresh_min_interval_seconds" class="mb-2 block text-sm font-medium text-gray-700 dark:text-gray-300">
+                    {{ t("admin.settings.oidc.ecosystemJwksRefreshMinIntervalSeconds") }}
+                  </label>
+                  <input id="ecosystem_jwks_refresh_min_interval_seconds" v-model.number="form.ecosystem_jwks_refresh_min_interval_seconds" type="number" min="1" max="3600" class="input" />
+                </div>
+                <div>
+                  <label for="ecosystem_rate_limit_per_minute" class="mb-2 block text-sm font-medium text-gray-700 dark:text-gray-300">
+                    {{ t("admin.settings.oidc.ecosystemRateLimitPerMinute") }}
+                  </label>
+                  <input id="ecosystem_rate_limit_per_minute" v-model.number="form.ecosystem_rate_limit_per_minute" type="number" min="1" max="10000" class="input" />
+                </div>
+              </div>
+            </div>
+          </div>
         </div>
         <!-- /Tab: Security — Registration, Turnstile, LinuxDo, OIDC -->
 

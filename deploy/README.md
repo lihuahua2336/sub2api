@@ -16,6 +16,7 @@ This directory contains files for deploying Sub2API on Linux servers and Apple-s
 |------|-------------|
 | `docker-compose.yml` | Docker Compose configuration (named volumes) |
 | `docker-compose.local.yml` | Docker Compose configuration (local directories, easy migration) |
+| `docker-compose.prod.yml` + `docker-compose.local-build.yml` | Local source build override for this host's existing `deploy` production stack |
 | `docker-deploy.sh` | **One-click Docker deployment script (recommended)** |
 | `apple-container.sh` | Native Apple `container` lifecycle script |
 | `APPLE_CONTAINER.md` | Apple `container` deployment and operations guide |
@@ -28,6 +29,8 @@ This directory contains files for deploying Sub2API on Linux servers and Apple-s
 | `DATAMANAGEMENTD_CN.md` | datamanagementd 部署与联动说明（中文） |
 | `config.example.yaml` | Example configuration file |
 | `EDGE_SECURITY.md` | Reverse proxy, CDN/WAF, trusted proxy, and ingress hardening guide |
+
+Logto ecosystem integrations: [通用配置指南](../docs/LOGTO_ECOSYSTEM_INTEGRATION_CN.md) and [EggDoc 参数示例、白名单优先级、401/403 排障与容器更新](../docs/EGGDOC_OIDC_SUB2API_RUNBOOK_CN.md)。本机更新不会自动更新其他服务器上的公网 API；接入参数以目标实例的 `/api/v1/ecosystem/docs` 为准。
 
 ---
 

@@ -141,6 +141,7 @@ docs/*
 !docs/BATCH_IMAGE_MVP.md
 !docs/COMPOSITE_GROUPS.md
 !docs/LOGTO_ECOSYSTEM_INTEGRATION_CN.md
+!docs/EGGDOC_OIDC_SUB2API_RUNBOOK_CN.md
 !docs/PLUGIN_DEVELOPMENT.md
 !docs/channel-monitor-v2-safe-defaults.md
 !docs/codex-credits.md

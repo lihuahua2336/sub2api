@@ -1,6 +1,8 @@
 # Logto 生态适配层配置与应用接入指南
 
-本文说明如何使用 Logto 用户 Access Token 调用 sub2api 的只读生态接口，并以当前生产拓扑和 `infinite-canvas` 接入实现为参考模板。
+本文说明如何使用 Logto 用户 Access Token 调用 sub2api 的只读生态接口，并保留 `infinite-canvas` 的历史接入实现作为参考模板。文中的 `sub.eggai.icu`、Client ID 和配置值都是实例示例，不代表每套部署的固定配置。
+
+**完整 EggDoc 示例与本次联调复盘：**[EggDoc 接入 Sub2API：配置示例与联调排障](EGGDOC_OIDC_SUB2API_RUNBOOK_CN.md)。其中使用 `testdoc.eggai.icu` + `api.eggai.icu`，包含 `.env`、白名单生效顺序、401/403 排查、真实响应契约和 Docker 更新步骤。接入前先从目标实例的 `/api/v1/ecosystem/docs` 核对参数，不要混用不同实例的 audience。
 
 本文面向部署人员和接入其他应用的开发者。Token 声明和验签依据详见 [Logto 生态 Access Token 契约](logto-ecosystem-token-contract.md)。
 
@@ -81,9 +83,9 @@ GET /api/v1/ecosystem/docs
 
 ## 3. sub2api 配置
 
-可以在 sub2api 管理后台启用“Logto 生态适配层”，当前生产配置为：
+可以在 sub2api 管理后台“系统设置 → 安全设置 → Logto 生态适配层”中配置。以下是历史 `sub.eggai.icu` 实例配置示例，不是 EggDoc 本次公网 API 的通用配置：
 
-| 配置项 | 当前值 |
+| 配置项 | 历史示例值 |
 | --- | --- |
 | 启用 | 是 |
 | Issuer URL | `https://auth.eggai.icu/oidc` |
@@ -99,7 +101,7 @@ GET /api/v1/ecosystem/docs
 | JWKS Minimum Refresh Interval | `30` 秒 |
 | Rate Limit | `60` 次/分钟 |
 
-等价 YAML 配置示例：
+对应的 YAML 启动配置示例（数据库中已保存的设置可覆盖这些值）：
 
 ```yaml
 ecosystem:
@@ -121,6 +123,8 @@ ecosystem:
 ```
 
 生产环境最好只允许 Logto 实际使用的签名算法。例如确认租户只签发 RS256 后，将列表收紧为 `["RS256"]`。
+
+配置白名单应追加业务应用自己的 Client ID 并保留其他 ID。环境变量名为 `ECOSYSTEM_ALLOWED_CLIENT_IDS`，支持英文逗号分隔，但 Compose 必须显式传入容器；数据库中已有的非空白名单优先于启动环境变量。旧前端曾缺少实际输入控件，即使后端和翻译支持也不会显示；需要部署包含新配置表单的镜像。
 
 ### 3.1 用户身份绑定前提
 
@@ -169,7 +173,7 @@ NEW_API_LOGTO_SCOPE=ecosystem:me ecosystem:models:read ecosystem:tokens:read eco
 | `NEW_API_BASE_URL` | 服务端实际请求 sub2api 的地址 |
 | `NEW_API_PUBLIC_URL` | 返回给浏览器使用的公开网关地址 |
 
-修改这些变量后需要重新构建或至少重启读取环境变量的应用进程，并退出 Logto、清理旧会话后重新授权。旧 Access Token 不会因为后台新增 Role 或 scope 而自动增加权限。
+修改这些变量后应按应用的部署方式重建或替换容器，使进程读取新配置。Docker 的普通 `restart` 不会更新容器已有的环境变量。resource、scopes 或用户角色改变后，需要重新取得相应的资源 Token；旧 Access Token 不会自动增加权限。仅追加 Sub2API 客户端白名单通常只需重新请求接口，不必退出共享 Logto 登录。
 
 ## 5. 客户端实现要求
 
@@ -231,17 +235,19 @@ async function getEcosystem<T>(accessToken: string, path: string): Promise<T> {
   });
 
   const payload = await response.json();
-  if (!response.ok || payload.success === false) {
+  if (!response.ok || payload.code !== 0) {
     throw new Error(payload.message || `sub2api returned ${response.status}`);
   }
-  return ("data" in payload ? payload.data : payload) as T;
+  return payload.data as T;
 }
 
 const models = await getEcosystem(accessToken, "/api/v1/ecosystem/models");
-const keys = await getEcosystem(accessToken, "/api/v1/ecosystem/keys");
+const keyPage = await getEcosystem(accessToken, "/api/v1/ecosystem/keys?page=1&page_size=100");
 ```
 
-这些调用应放在业务应用服务端。特别是 `/keys` 会返回用户自己的可用 API Key，不应把 Logto Access Token 暴露到浏览器，也不要缓存该响应。
+这些调用应放在业务应用服务端。`/keys` 返回的 `data` 是含 `items`、`page`、`pages` 等字段的分页对象，不是直接的数组；需要按页获取完整列表。模型名称位于 `model`，Key 字段是 `id/key/name/group_id`，不能照搬旧接口的 `token_id/api_key/token_name/group`。特别是 `/keys` 会返回用户自己的可用 API Key，不应把 Logto Access Token 暴露到浏览器，也不要缓存该响应。
+
+客户端必须区分 HTTP 401 与 403：Token 失效可以要求重新授权；客户端未放行、scope 不足等 403 应保留有效登录，并返回可排查的原因。不能一律清除 Session 后显示成 401。完整字段示例见 [EggDoc 联调文档](EGGDOC_OIDC_SUB2API_RUNBOOK_CN.md#6-eggdoc-适配的真实-sub2api-响应)。
 
 ### 5.4 当前参考实现位置
 
@@ -349,14 +355,14 @@ unset SUB2API_LOGTO_ACCESS_TOKEN
 ## 9. 新应用接入清单
 
 - [ ] 在 Logto 创建 Traditional Web 应用，不复用其他应用的 Client Secret。
-- [ ] 配置准确的 Redirect URI 和 Post sign-out URI。
-- [ ] 确认 sub2api API Resource Identifier 为 `https://sub.eggai.icu/api`。
+- [ ] 配置准确的 Redirect URI；按应用退出方式设置 Post sign-out URI（EggDoc 仅清除本地 Session，不要求 Logto 全局退出回调）。
+- [ ] 从目标实例文档确认 API Resource Identifier，不照搬其他实例的 `https://sub.eggai.icu/api`。
 - [ ] 为用户分配包含所需 `ecosystem:*` 权限的 Role。
 - [ ] 客户端登录配置同时包含 resource 和 scopes。
 - [ ] 服务端使用 `getAccessToken(config, resource)` 获取资源 Access Token。
 - [ ] sub2api Allowed Client IDs 中加入新应用 Client ID。
 - [ ] 用户已在 sub2api 建立相同 `(issuer, sub)` 的 OIDC 身份绑定。
-- [ ] 重启应用并清除旧会话后重新授权。
+- [ ] 确认新配置已进入运行容器；resource/scopes 变更后重新授权，单纯追加白名单后重新请求即可。
 - [ ] 分别验证 `/me`、`/models` 和应用实际需要的其他接口。
 - [ ] 日志中不记录 Access Token、Client Secret 或返回的 API Key。
 

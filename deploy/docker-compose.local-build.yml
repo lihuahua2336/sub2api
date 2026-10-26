@@ -1,0 +1,10 @@
+# Use with docker-compose.prod.yml to deploy the local source build:
+# docker compose -p deploy -f deploy/docker-compose.prod.yml \
+#   -f deploy/docker-compose.local-build.yml --env-file deploy/.env \
+#   up -d --build --no-deps sub2api
+services:
+  sub2api:
+    image: sub2api:local-ecosystem
+    build:
+      context: ..
+      dockerfile: Dockerfile
