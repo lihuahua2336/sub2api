@@ -1,4 +1,5 @@
 import { beforeAll, beforeEach, describe, expect, it, vi } from 'vitest'
+import type { RouteRecordRaw } from 'vue-router'
 
 type NavigationGuard = (
   to: Record<string, any>,
@@ -8,6 +9,7 @@ type NavigationGuard = (
 
 const routerHarness = vi.hoisted(() => ({
   guard: null as NavigationGuard | null,
+  routes: [] as RouteRecordRaw[],
 }))
 
 const authStore = vi.hoisted(() => ({
@@ -26,6 +28,7 @@ const appStore = vi.hoisted(() => ({
     payment_enabled?: boolean
     risk_control_enabled?: boolean
     subscription_enabled?: boolean
+    oidc_only_login?: boolean
     custom_menu_items?: []
   },
   fetchPublicSettings: vi.fn(),
@@ -33,13 +36,16 @@ const appStore = vi.hoisted(() => ({
 
 vi.mock('vue-router', () => ({
   createWebHistory: vi.fn(() => ({})),
-  createRouter: vi.fn(() => ({
-    beforeEach: vi.fn((guard: NavigationGuard) => {
-      routerHarness.guard = guard
-    }),
-    afterEach: vi.fn(),
-    onError: vi.fn(),
-  })),
+  createRouter: vi.fn((options: { routes: RouteRecordRaw[] }) => {
+    routerHarness.routes = options.routes
+    return {
+      beforeEach: vi.fn((guard: NavigationGuard) => {
+        routerHarness.guard = guard
+      }),
+      afterEach: vi.fn(),
+      onError: vi.fn(),
+    }
+  }),
 }))
 
 vi.mock('@/stores/auth', () => ({
@@ -106,6 +112,75 @@ function runGuard(meta: Record<string, unknown>, path: string) {
   return { navigation, next }
 }
 
+describe('admin login route', () => {
+  beforeAll(async () => {
+    await import('@/router')
+  })
+
+  beforeEach(() => {
+    authStore.isAuthenticated = false
+    authStore.isAdmin = false
+    appStore.backendModeEnabled = false
+    appStore.cachedPublicSettings = null
+  })
+
+  it.each([false, true])('allows anonymous access with backend mode %s', async (backendMode) => {
+    appStore.backendModeEnabled = backendMode
+    const route = routerHarness.routes.find((record) => record.path === '/admin/login')
+    expect(route?.name).toBe('AdminLogin')
+    expect(route?.meta?.requiresAuth).toBe(false)
+    expect(route?.component).toBeTypeOf('function')
+
+    const { navigation, next } = runGuard(route!.meta!, route!.path)
+    await navigation
+    expect(next).toHaveBeenCalledOnce()
+    expect(next).toHaveBeenCalledWith()
+  })
+
+  it.each([false, true])('keeps the admin entry available in OIDC-only mode with backend mode %s', async (backendMode) => {
+    appStore.backendModeEnabled = backendMode
+    vi.stubEnv('VITE_OIDC_ONLY', 'true')
+    try {
+      const route = routerHarness.routes.find((record) => record.path === '/admin/login')!
+      const { navigation, next } = runGuard(route.meta!, route.path)
+      await navigation
+      expect(next).toHaveBeenCalledOnce()
+      expect(next).toHaveBeenCalledWith()
+    } finally {
+      vi.unstubAllEnvs()
+    }
+  })
+
+  it('allows admin login when public settings enable OIDC-only login', async () => {
+    appStore.cachedPublicSettings = { oidc_only_login: true }
+    const route = routerHarness.routes.find((record) => record.path === '/admin/login')!
+    const { navigation, next } = runGuard(route.meta!, route.path)
+    await navigation
+    expect(next).toHaveBeenCalledOnce()
+    expect(next).toHaveBeenCalledWith()
+  })
+
+  it('redirects authenticated admins to their dashboard', async () => {
+    authStore.isAuthenticated = true
+    authStore.isAdmin = true
+    const route = routerHarness.routes.find((record) => record.path === '/admin/login')!
+    const { navigation, next } = runGuard(route.meta!, route.path)
+    await navigation
+    expect(next).toHaveBeenCalledOnce()
+    expect(next).toHaveBeenCalledWith('/admin/dashboard')
+  })
+
+  it('lets non-admin users access login in backend mode', async () => {
+    authStore.isAuthenticated = true
+    appStore.backendModeEnabled = true
+    const route = routerHarness.routes.find((record) => record.path === '/admin/login')!
+    const { navigation, next } = runGuard(route.meta!, route.path)
+    await navigation
+    expect(next).toHaveBeenCalledOnce()
+    expect(next).toHaveBeenCalledWith()
+  })
+})
+
 describe('feature route guard', () => {
   beforeAll(async () => {
     await import('@/router')
@@ -115,6 +190,7 @@ describe('feature route guard', () => {
     authStore.isAuthenticated = true
     authStore.isAdmin = false
     authStore.isSimpleMode = false
+    appStore.backendModeEnabled = false
     appStore.publicSettingsLoaded = false
     appStore.cachedPublicSettings = null
     appStore.fetchPublicSettings.mockReset()

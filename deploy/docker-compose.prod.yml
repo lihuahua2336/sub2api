@@ -1,6 +1,6 @@
 services:
   sub2api:
-    image: ghcr.io/lihuahua2336/sub2api:0.2.19
+    image: ghcr.io/lihuahua2336/sub2api:0.2.21
     container_name: sub2api
     restart: unless-stopped
     security_opt:
