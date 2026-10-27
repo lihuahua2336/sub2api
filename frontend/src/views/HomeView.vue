@@ -6,6 +6,7 @@
       v-if="isHomeContentUrl"
       :src="homeContent.trim()"
       class="h-screen w-full border-0"
+      allow="clipboard-write"
       allowfullscreen
     ></iframe>
     <!-- HTML mode - SECURITY: homeContent is admin-only setting, XSS risk is acceptable -->
